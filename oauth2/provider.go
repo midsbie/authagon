@@ -105,7 +105,8 @@ func (p *StandardProvider) Name() string {
 	return p.name
 }
 
-func (p *StandardProvider) Begin(w http.ResponseWriter, r *http.Request, config AuthConfig) *secutil.HTTPError {
+func (p *StandardProvider) Begin(w http.ResponseWriter, r *http.Request,
+	config AuthConfig) *secutil.HTTPError {
 	auth, err := p.session.Set(w, r, config)
 	if err != nil {
 		return secutil.NewHTTPError(http.StatusInternalServerError,
@@ -113,12 +114,15 @@ func (p *StandardProvider) Begin(w http.ResponseWriter, r *http.Request, config 
 	}
 
 	conf := p.configure()
+	// We may want to support AccessTypeOffline if we ever want the server to return a refresh
+	// token.  As it stands, a refresh token is not issued.
 	loginURL := conf.AuthCodeURL(auth.State)
 	http.Redirect(w, r, loginURL, http.StatusFound)
 	return nil
 }
 
-func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (*AuthResult, *secutil.HTTPError) {
+func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (
+	*AuthResult, *secutil.HTTPError) {
 	receivedState := r.URL.Query().Get("state")
 	if receivedState == "" {
 		return nil, secutil.NewHTTPError(http.StatusBadRequest, "state missing", nil)
