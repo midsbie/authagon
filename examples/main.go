@@ -47,6 +47,24 @@ func main() {
 	providerRegistry := getProviderRegistry()
 
 	r := chi.NewRouter()
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		if sessionCtl.Exists(r) {
+			t, _ := template.New("authenticated").Parse(authTemplate)
+			t.Execute(w, providerRegistry)
+			return
+		}
+
+		t, err := template.New("index").Parse(indexTemplate)
+		if err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		if err := t.Execute(w, providerRegistry); err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+		}
+	})
+
 	r.Get("/auth/{provider}", func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "provider")
 		prov, err := svc.GetProvider(name)
@@ -90,34 +108,6 @@ func main() {
 		}
 	})
 
-	r.Get("/logout", func(w http.ResponseWriter, r *http.Request) {
-		if herr := sessionCtl.Del(w, r); herr != nil {
-			http.Error(w, herr.Message, herr.Status)
-			return
-		}
-
-		w.Header().Set("Location", "/")
-		w.WriteHeader(http.StatusTemporaryRedirect)
-	})
-
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		if sessionCtl.Exists(r) {
-			t, _ := template.New("authenticated").Parse(authTemplate)
-			t.Execute(w, providerRegistry)
-			return
-		}
-
-		t, err := template.New("index").Parse(indexTemplate)
-		if err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
-			return
-		}
-
-		if err := t.Execute(w, providerRegistry); err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
-		}
-	})
-
 	r.Get("/profile", func(w http.ResponseWriter, r *http.Request) {
 		sess, herr := sessionCtl.Get(r)
 		if herr != nil {
@@ -134,6 +124,16 @@ func main() {
 		if err := t.Execute(w, sess); err != nil {
 			http.Error(w, "Server error", http.StatusInternalServerError)
 		}
+	})
+
+	r.Get("/logout", func(w http.ResponseWriter, r *http.Request) {
+		if herr := sessionCtl.Del(w, r); herr != nil {
+			http.Error(w, herr.Message, herr.Status)
+			return
+		}
+
+		w.Header().Set("Location", "/")
+		w.WriteHeader(http.StatusTemporaryRedirect)
 	})
 
 	log.Println("listening on :" + port)
