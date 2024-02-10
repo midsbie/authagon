@@ -12,13 +12,15 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type MapProfileFn func(ParsedProfile, []byte) (Profile, error)
-
 type Provider interface {
 	Name() string
-	ApplyServiceConfig(config ServiceConfig)
+	Configure(config ServiceConfig)
 	Begin(w http.ResponseWriter, r *http.Request, config AuthConfig) error
 	Finish(w http.ResponseWriter, r *http.Request) (*AuthResult, error)
+}
+
+type ProfileMapper interface {
+	MapProfile(data ParsedProfile, _ []byte) (Profile, error)
 }
 
 type AuthSession interface {
@@ -45,6 +47,8 @@ type AuthConfig struct {
 	RedirectURL string
 }
 
+type StandardProviderOption func(*ProviderConfig)
+
 type ProviderConfig struct {
 	ClientID     string
 	ClientSecret string
@@ -52,38 +56,54 @@ type ProviderConfig struct {
 	CallbackURL  string
 }
 
+func (o *StandardProviderOption) WithIssuer(issuer string) StandardProviderOption {
+	return func(c *ProviderConfig) {
+		c.Issuer = issuer
+	}
+}
+
+func (o *StandardProviderOption) WithCallbackURL(callbackURL string) StandardProviderOption {
+	return func(c *ProviderConfig) {
+		c.CallbackURL = callbackURL
+	}
+}
+
+func NewProviderConfig(clientID string, clientSecret string,
+	options []StandardProviderOption) ProviderConfig {
+	config := ProviderConfig{
+		ClientID:     clientID,
+		ClientSecret: clientSecret}
+
+	for _, option := range options {
+		option(&config)
+	}
+	return config
+}
+
 type endpoint struct {
 	oauth2.Endpoint
 	ProfileURL string
 }
 
-type ProviderBlueprint struct {
-	name       string
-	endpoint   endpoint
-	scopes     []string
-	mapProfile MapProfileFn
-}
-
-func (b *ProviderBlueprint) Configure(options ProviderConfig) *StandardProvider {
-	return &StandardProvider{*b, options, nil}
-}
-
 type StandardProvider struct {
-	provider ProviderBlueprint
+	name     string
+	endpoint endpoint
+	scopes   []string
 	config   ProviderConfig
 	session  AuthSession
+	mapper   ProfileMapper
+}
+
+func (p *StandardProvider) Configure(config ServiceConfig) {
+	p.session = config.Session
+	cbp := strings.Replace(
+		config.CallbackPathTemplate, providerPlaceholder, p.name, -1)
+	p.config.CallbackURL = strings.TrimSuffix(config.BaseURL, "/") +
+		"/" + strings.Trim(cbp, "/")
 }
 
 func (p *StandardProvider) Name() string {
-	return p.provider.name
-}
-
-func (p *StandardProvider) ApplyServiceConfig(config ServiceConfig) {
-	p.session = config.Session
-	cbp := strings.Replace(
-		config.CallbackPathTemplate, providerPlaceholder, p.provider.name, -1)
-	p.config.CallbackURL = strings.TrimSuffix(config.BaseURL, "/") +
-		"/" + strings.Trim(cbp, "/")
+	return p.name
 }
 
 func (p *StandardProvider) Begin(w http.ResponseWriter, r *http.Request, config AuthConfig) error {
@@ -120,7 +140,7 @@ func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (*Auth
 	}
 
 	client := conf.Client(context.Background(), token)
-	preq, err := client.Get(p.provider.endpoint.ProfileURL)
+	preq, err := client.Get(p.endpoint.ProfileURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile")
 	}
@@ -141,7 +161,7 @@ func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (*Auth
 		return nil, fmt.Errorf("failed to unmarshal profile: %w", err)
 	}
 
-	profile, err := p.provider.mapProfile(mappedProfile, byteProfile)
+	profile, err := p.mapper.MapProfile(mappedProfile, byteProfile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map profile: %w", err)
 	}
@@ -156,8 +176,8 @@ func (p *StandardProvider) configure() oauth2.Config {
 	return oauth2.Config{
 		ClientID:     p.config.ClientID,
 		ClientSecret: p.config.ClientSecret,
-		Endpoint:     p.provider.endpoint.Endpoint,
-		Scopes:       p.provider.scopes,
+		Endpoint:     p.endpoint.Endpoint,
+		Scopes:       p.scopes,
 		RedirectURL:  p.config.CallbackURL,
 	}
 }

@@ -25,9 +25,9 @@ type ProviderRegistry struct {
 }
 
 func main() {
-	googleProvider := oauth2.NewGoogle().Configure(oauth2.ProviderConfig{
-		ClientID:     os.Getenv("AUTH_OAUTH_PROVIDER_GOOGLE_KEY"),
-		ClientSecret: os.Getenv("AUTH_OAUTH_PROVIDER_GOOGLE_SECRET")})
+	googleProvider := oauth2.NewGoogle(
+		os.Getenv("AUTH_OAUTH_PROVIDER_GOOGLE_KEY"),
+		os.Getenv("AUTH_OAUTH_PROVIDER_GOOGLE_SECRET"))
 
 	cookieStore := store.NewCookieStore(store.WithSecure(false))
 	jwts, err := oauth2.NewJWTSession(cookieStore, jwtSessionSecret,

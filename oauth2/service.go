@@ -33,7 +33,7 @@ func NewService(config ServiceConfig) OAuth2Service {
 }
 
 func (s *OAuth2Service) Register(provider Provider) {
-	provider.ApplyServiceConfig(s.config)
+	provider.Configure(s.config)
 	s.providers[provider.Name()] = provider
 }
 
