@@ -49,12 +49,12 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		if sessionCtl.Exists(r) {
-			t, _ := template.New("authenticated").Parse(authTemplate)
+			t, _ := template.New("authenticated").Parse(indexAuthTpl)
 			t.Execute(w, providerRegistry)
 			return
 		}
 
-		t, err := template.New("index").Parse(indexTemplate)
+		t, err := template.New("index").Parse(indexAnonTpl)
 		if err != nil {
 			http.Error(w, "Server error", http.StatusInternalServerError)
 			return
@@ -115,7 +115,7 @@ func main() {
 			return
 		}
 
-		t, err := template.New("profile").Parse(profileTemplate)
+		t, err := template.New("profile").Parse(profileTpl)
 		if err != nil {
 			http.Error(w, "Server error", http.StatusInternalServerError)
 			return
@@ -154,18 +154,18 @@ func getProviderRegistry() *ProviderRegistry {
 	return &ProviderRegistry{Providers: keys, ProvidersMap: m}
 }
 
-var indexTemplate = `
+var indexAnonTpl = `
 {{range $key,$value:=.Providers}}
     <p><a href="/auth/{{$value}}?redirect_to=/">Log in with {{index $.ProvidersMap $value}}</a></p>
 {{end}}
 `
 
-var authTemplate = `
+var indexAuthTpl = `
 <p><strong>[Authenticated]</strong> <a href="/logout">Log out</a></p>
 <p>View <a href="/profile">profile</a></p>
 `
 
-var profileTemplate = `
+var profileTpl = `
 <p><a href="/">Home</a> | <a href="/logout">Log out</a></p>
 <p>ID: <code>{{.Profile.ID}}</code></p>
 <p>Name: {{.Profile.FirstName}} {{.Profile.LastName}} ({{.Profile.Name}})</p>
