@@ -152,7 +152,7 @@ var authTemplate = `
 `
 
 var profileTemplate = `
-<p><a href="/logout">Log out</a></p>
+<p><a href="/">Home</a> | <a href="/logout">Log out</a></p>
 <p>ID: <code>{{.Profile.ID}}</code></p>
 <p>Name: {{.Profile.FirstName}} {{.Profile.LastName}} ({{.Profile.Name}})</p>
 <p>Email: <code>{{.Profile.Email}}</code></p>
