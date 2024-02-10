@@ -51,7 +51,7 @@ func main() {
 		name := chi.URLParam(r, "provider")
 		prov, err := svc.GetProvider(name)
 		if err != nil {
-			fmt.Fprintf(w, err.Error())
+			http.Error(w, "Provider not found", http.StatusNotFound)
 			return
 		}
 
@@ -59,8 +59,8 @@ func main() {
 			Audience:    "authagon",
 			RedirectURL: r.URL.Query().Get("redirect_to"),
 		}
-		if err := prov.Begin(w, r, config); err != nil {
-			fmt.Fprintf(w, err.Error())
+		if herr := prov.Begin(w, r, config); err != nil {
+			http.Error(w, herr.Message, herr.Status)
 		}
 	})
 
@@ -68,21 +68,21 @@ func main() {
 		name := chi.URLParam(r, "provider")
 		prov, err := svc.GetProvider(name)
 		if err != nil {
-			fmt.Fprintf(w, err.Error())
+			http.Error(w, "Provider not found", http.StatusNotFound)
 			return
 		}
 
-		result, err := prov.Finish(w, r)
-		if err != nil {
-			fmt.Fprintf(w, err.Error())
+		result, herr := prov.Finish(w, r)
+		if herr != nil {
+			http.Error(w, herr.Message, herr.Status)
 			return
 		}
 
 		if sid, err := sessionCtl.Set(w, *result); err != nil {
-			fmt.Fprintf(w, err.Error())
+			http.Error(w, "Failed to create session", http.StatusInternalServerError)
 			return
 		} else {
-			fmt.Printf("session created: %s\n", sid)
+			fmt.Printf("Session created: %s\n", sid)
 		}
 
 		if result.RedirectURL != "" {
@@ -91,8 +91,8 @@ func main() {
 	})
 
 	r.Get("/logout", func(w http.ResponseWriter, r *http.Request) {
-		if err := sessionCtl.Del(w, r); err != nil {
-			fmt.Fprintf(w, err.Error())
+		if herr := sessionCtl.Del(w, r); herr != nil {
+			http.Error(w, herr.Message, herr.Status)
 			return
 		}
 
@@ -107,19 +107,33 @@ func main() {
 			return
 		}
 
-		t, _ := template.New("index").Parse(indexTemplate)
-		t.Execute(w, providerRegistry)
-	})
-
-	r.Get("/profile", func(w http.ResponseWriter, r *http.Request) {
-		sess, err := sessionCtl.Get(r)
+		t, err := template.New("index").Parse(indexTemplate)
 		if err != nil {
-			fmt.Fprintf(w, err.Error())
+			http.Error(w, "Server error", http.StatusInternalServerError)
 			return
 		}
 
-		t, _ := template.New("profile").Parse(profileTemplate)
-		t.Execute(w, sess)
+		if err := t.Execute(w, providerRegistry); err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+		}
+	})
+
+	r.Get("/profile", func(w http.ResponseWriter, r *http.Request) {
+		sess, herr := sessionCtl.Get(r)
+		if herr != nil {
+			http.Error(w, herr.Message, herr.Status)
+			return
+		}
+
+		t, err := template.New("profile").Parse(profileTemplate)
+		if err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		if err := t.Execute(w, sess); err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+		}
 	})
 
 	log.Println("listening on :" + port)
