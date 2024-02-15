@@ -17,6 +17,7 @@ import (
 const (
 	port             = "8081"
 	jwtSessionSecret = "foobarbaz"
+	audience         = "authagon"
 )
 
 type ProviderRegistry struct {
@@ -31,7 +32,7 @@ func main() {
 
 	cookieStore := store.NewCookieStore(store.WithSecure(false))
 	jwts, err := oauth2.NewJWTSession(cookieStore, jwtSessionSecret,
-		oauth2.WithAudience("authagon"))
+		oauth2.WithAudience(audience))
 	if err != nil {
 		panic(fmt.Errorf("failed to create auth session: %w", err))
 	}
@@ -74,7 +75,7 @@ func main() {
 		}
 
 		config := oauth2.AuthConfig{
-			Audience:    "authagon",
+			Audience:    audience,
 			RedirectURL: r.URL.Query().Get("redirect_to"),
 		}
 		if herr := prov.Begin(w, r, config); err != nil {
