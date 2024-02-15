@@ -29,6 +29,7 @@ type AuthSession interface {
 }
 
 type AuthResult struct {
+	Provider    string
 	Profile     Profile
 	Token       oauth2.Token
 	RedirectURL string
@@ -177,6 +178,7 @@ func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (
 	}
 
 	return &AuthResult{
+		Provider:    p.name,
 		Profile:     profile,
 		Token:       *token,
 		RedirectURL: session.RedirectURL}, nil
