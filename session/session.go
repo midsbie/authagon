@@ -13,6 +13,7 @@ import (
 const (
 	defaultSessionIDKey    = "sid"
 	defaultSessionDuration = 24 * time.Hour
+	defaultSessionIdLength = 32
 )
 
 // sessionCtlOption is the type for functional options.
@@ -52,7 +53,7 @@ func NewSessionCtl(browserStore store.BrowserStore, sessionStore store.SessionSt
 }
 
 func (s *SessionCtl) Set(w http.ResponseWriter, a oauth2.AuthResult) (string, *secutil.HTTPError) {
-	sid, err := secutil.RandomToken(32)
+	sid, err := secutil.RandomToken(defaultSessionIdLength)
 	if err != nil {
 		return "", secutil.NewHTTPError(http.StatusInternalServerError,
 			"failed to generate session ID", err)
