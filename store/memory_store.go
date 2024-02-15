@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var _ SessionStore = (*MemoryStore)(nil)
+
 type MemoryStore struct {
 	sessions map[string]interface{}
 }
@@ -27,9 +29,9 @@ func (s *MemoryStore) Get(sid string) (interface{}, error) {
 	return nil, fmt.Errorf("session not found: %s", sid)
 }
 
-func (s *MemoryStore) Exists(sid string) bool {
+func (s *MemoryStore) Exists(sid string) (bool, error) {
 	_, ok := s.sessions[sid]
-	return ok
+	return ok, nil
 }
 
 func (s *MemoryStore) Del(sid string) error {

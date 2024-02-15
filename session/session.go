@@ -102,9 +102,19 @@ func (s *SessionCtl) Get(r *http.Request) (oauth2.AuthResult, *secutil.HTTPError
 	return a, nil
 }
 
-func (s *SessionCtl) Exists(r *http.Request) bool {
+func (s *SessionCtl) Exists(r *http.Request) (bool, error) {
 	sid, err := s.browserStore.Get(r, s.sessionIDKey)
-	return err == nil && sid != "" && s.sessionStore.Exists(sid)
+	if err != nil {
+		return false, err
+	} else if sid == "" {
+		return false, fmt.Errorf("invalid session ID")
+	}
+
+	ok, err := s.sessionStore.Exists(sid)
+	if err != nil {
+		return false, err
+	}
+	return ok, nil
 }
 
 func (s *SessionCtl) Del(w http.ResponseWriter, r *http.Request) *secutil.HTTPError {

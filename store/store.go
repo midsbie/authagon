@@ -14,6 +14,6 @@ type BrowserStore interface {
 type SessionStore interface {
 	Set(sid string, value interface{}, duration time.Duration) error
 	Get(sid string) (interface{}, error)
-	Exists(sid string) bool
+	Exists(sid string) (bool, error)
 	Del(sid string) error
 }
