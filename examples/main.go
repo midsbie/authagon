@@ -48,7 +48,10 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		if sessionCtl.Exists(r) {
+		if ok, err := sessionCtl.Exists(r); err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		} else if ok {
 			t, _ := template.New("authenticated").Parse(indexAuthTpl)
 			t.Execute(w, providerRegistry)
 			return
