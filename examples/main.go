@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/midsbie/authagon/oauth2"
-	"github.com/midsbie/authagon/session"
 	"github.com/midsbie/authagon/store"
 )
 
@@ -44,7 +43,7 @@ func main() {
 	svc.Register(googleProvider)
 
 	sessionStore := store.NewMemoryStore()
-	sessionCtl := session.NewSessionCtl(cookieStore, sessionStore)
+	sessionCtl := oauth2.NewSessionCtl(cookieStore, sessionStore)
 	providerRegistry := getProviderRegistry()
 
 	r := chi.NewRouter()

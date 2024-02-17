@@ -1,11 +1,10 @@
-package session
+package oauth2
 
 import (
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/midsbie/authagon/oauth2"
 	"github.com/midsbie/authagon/secutil"
 	"github.com/midsbie/authagon/store"
 )
@@ -52,7 +51,7 @@ func NewSessionCtl(browserStore store.BrowserStore, sessionStore store.SessionSt
 	return sc
 }
 
-func (s *SessionCtl) Set(w http.ResponseWriter, a oauth2.AuthResult) (string, *secutil.HTTPError) {
+func (s *SessionCtl) Set(w http.ResponseWriter, a AuthResult) (string, *secutil.HTTPError) {
 	sid, err := secutil.RandomToken(defaultSessionIdLength)
 	if err != nil {
 		return "", secutil.NewHTTPError(http.StatusInternalServerError,
@@ -80,22 +79,22 @@ func (s *SessionCtl) Set(w http.ResponseWriter, a oauth2.AuthResult) (string, *s
 		"failed to persist session in store", err)
 }
 
-func (s *SessionCtl) Get(r *http.Request) (oauth2.AuthResult, *secutil.HTTPError) {
+func (s *SessionCtl) Get(r *http.Request) (AuthResult, *secutil.HTTPError) {
 	sid, err := s.browserStore.Get(r, s.sessionIDKey)
 	if err != nil {
-		return oauth2.AuthResult{}, secutil.NewHTTPError(
+		return AuthResult{}, secutil.NewHTTPError(
 			http.StatusUnauthorized, "not authenticated", err)
 	}
 
 	ab, err := s.sessionStore.Get(sid)
 	if err != nil {
-		return oauth2.AuthResult{}, secutil.NewHTTPError(
+		return AuthResult{}, secutil.NewHTTPError(
 			http.StatusNotFound, "session not found", err)
 	}
 
-	a, ok := ab.(oauth2.AuthResult)
+	a, ok := ab.(AuthResult)
 	if !ok {
-		return oauth2.AuthResult{}, secutil.NewHTTPError(http.StatusInternalServerError,
+		return AuthResult{}, secutil.NewHTTPError(http.StatusInternalServerError,
 			"failed to convert session", fmt.Errorf("session ID: %s", sid))
 	}
 

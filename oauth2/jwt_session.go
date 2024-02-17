@@ -73,8 +73,8 @@ func WithSessionKey(name string) option {
 	}
 }
 
-// WithSessionDuration sets the cookie duration of the JWTSession.
-func WithSessionDuration(duration time.Duration) option {
+// WithJWTSessionDuration sets the cookie duration of the JWTSession.
+func WithJWTSessionDuration(duration time.Duration) option {
 	return func(c *JWTSession) {
 		c.sessionDuration = duration
 	}
