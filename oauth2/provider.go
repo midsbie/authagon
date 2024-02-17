@@ -56,13 +56,13 @@ type ProviderConfig struct {
 	CallbackURL  string
 }
 
-func (o *StandardProviderOption) WithIssuer(issuer string) StandardProviderOption {
+func WithProviderIssuer(issuer string) StandardProviderOption {
 	return func(c *ProviderConfig) {
 		c.Issuer = issuer
 	}
 }
 
-func (o *StandardProviderOption) WithCallbackURL(callbackURL string) StandardProviderOption {
+func WithCallbackURL(callbackURL string) StandardProviderOption {
 	return func(c *ProviderConfig) {
 		c.CallbackURL = callbackURL
 	}

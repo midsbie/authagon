@@ -52,8 +52,8 @@ type JWTSession struct {
 // option configures a JWTSession.
 type option func(*JWTSession)
 
-// WithIssuer sets the issuer of the JWTSession.
-func WithIssuer(issuer string) option {
+// WithJWTIssuer sets the issuer of the JWTSession.
+func WithJWTIssuer(issuer string) option {
 	return func(c *JWTSession) {
 		c.issuer = issuer
 	}
