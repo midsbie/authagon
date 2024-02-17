@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	providerPlaceholder         = "{provider}"
-	defaultCallbackPathTemplate = "/auth/" + providerPlaceholder + "/callback"
+	ProviderPlaceholder         = "{provider}"
+	DefaultCallbackPathTemplate = "/auth/" + ProviderPlaceholder + "/callback"
 )
 
 type ServiceConfig struct {
@@ -24,7 +24,7 @@ type OAuth2Service struct {
 
 func NewService(config ServiceConfig) OAuth2Service {
 	if config.CallbackPathTemplate == "" {
-		config.CallbackPathTemplate = defaultCallbackPathTemplate
+		config.CallbackPathTemplate = DefaultCallbackPathTemplate
 	}
 
 	return OAuth2Service{
