@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultSessionIDKey    = "sid"
+	DefaultSessionIDKey    = "sid"
 	defaultSessionDuration = 24 * time.Hour
 	defaultSessionIdLength = 32
 )
@@ -40,7 +40,7 @@ type SessionCtl struct {
 func NewSessionCtl(browserStore store.BrowserStore, sessionStore store.SessionStore,
 	options ...sessionCtlOption) *SessionCtl {
 	sc := &SessionCtl{
-		sessionIDKey:    defaultSessionIDKey,
+		sessionIDKey:    DefaultSessionIDKey,
 		sessionDuration: defaultSessionDuration,
 		browserStore:    browserStore,
 		sessionStore:    sessionStore}
@@ -129,4 +129,8 @@ func (s *SessionCtl) Del(w http.ResponseWriter, r *http.Request) *secutil.HTTPEr
 	}
 
 	return nil
+}
+
+func (s *SessionCtl) SessionIDKey() string {
+	return s.sessionIDKey
 }
