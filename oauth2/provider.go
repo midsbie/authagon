@@ -96,10 +96,12 @@ type StandardProvider struct {
 
 func (p *StandardProvider) Configure(config ServiceConfig) {
 	p.session = config.Session
-	cbp := strings.Replace(
-		config.CallbackPathTemplate, providerPlaceholder, p.name, -1)
-	p.config.CallbackURL = strings.TrimSuffix(config.BaseURL, "/") +
-		"/" + strings.Trim(cbp, "/")
+	if p.config.CallbackURL == "" {
+		cbp := strings.Replace(
+			config.CallbackPathTemplate, ProviderPlaceholder, p.name, -1)
+		p.config.CallbackURL = strings.TrimSuffix(config.BaseURL, "/") +
+			"/" + strings.Trim(cbp, "/")
+	}
 }
 
 func (p *StandardProvider) Name() string {
