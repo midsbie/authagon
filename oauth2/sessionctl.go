@@ -33,11 +33,11 @@ func WithSessionDuration(sessionDuration time.Duration) sessionCtlOption {
 type SessionCtl struct {
 	sessionIDKey    string
 	sessionDuration time.Duration
-	browserStore    store.BrowserStore
-	sessionStore    store.SessionStore
+	browserStore    store.BrowserStorer
+	sessionStore    store.SessionStorer
 }
 
-func NewSessionCtl(browserStore store.BrowserStore, sessionStore store.SessionStore,
+func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionStorer,
 	options ...sessionCtlOption) *SessionCtl {
 	sc := &SessionCtl{
 		sessionIDKey:    DefaultSessionIDKey,

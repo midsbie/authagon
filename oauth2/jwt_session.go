@@ -40,7 +40,7 @@ type Context struct {
 // JWTs. The struct is used to create, validate, and terminate sessions that rely on JWT for
 // authentication and state management in web applications.
 type JWTSession struct {
-	store           store.BrowserStore
+	store           store.BrowserStorer
 	secret          string
 	issuer          string
 	audience        string
@@ -96,7 +96,7 @@ func WithTokenDuration(duration time.Duration) option {
 //
 // The constructor requires a store for persisting session data and a secret for signing the
 // JWTs. Additional configurations can be applied through variadic option functions.
-func NewJWTSession(store store.BrowserStore, secret string, options ...option) (
+func NewJWTSession(store store.BrowserStorer, secret string, options ...option) (
 	*JWTSession, error) {
 	if store == nil {
 		return nil, fmt.Errorf("store is required")

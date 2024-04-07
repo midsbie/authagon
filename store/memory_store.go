@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var _ SessionStore = (*MemoryStore)(nil)
+var _ SessionStorer = (*MemoryStore)(nil)
 
 type MemoryStore struct {
 	sessions map[string]interface{}
