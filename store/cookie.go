@@ -9,39 +9,39 @@ const (
 	defaultPath = "/"
 )
 
-// cookieStoreOption is the type for functional options.
-type cookieStoreOption func(*CookieStore)
+// CookieStoreOption is the type for functional options.
+type CookieStoreOption func(*CookieStore)
 
 // WithPath sets the cookie path.
-func WithPath(path string) cookieStoreOption {
+func WithPath(path string) CookieStoreOption {
 	return func(cs *CookieStore) {
 		cs.path = path
 	}
 }
 
 // WithDomain sets the cookie domain.
-func WithDomain(domain string) cookieStoreOption {
+func WithDomain(domain string) CookieStoreOption {
 	return func(cs *CookieStore) {
 		cs.domain = domain
 	}
 }
 
 // WithHTTPOnly sets the HTTPOnly flag.
-func WithHTTPOnly(httpOnly bool) cookieStoreOption {
+func WithHTTPOnly(httpOnly bool) CookieStoreOption {
 	return func(cs *CookieStore) {
 		cs.httpOnly = httpOnly
 	}
 }
 
 // WithSecure sets the Secure flag.
-func WithSecure(secure bool) cookieStoreOption {
+func WithSecure(secure bool) CookieStoreOption {
 	return func(cs *CookieStore) {
 		cs.secure = secure
 	}
 }
 
 // WithSameSite sets the SameSite option.
-func WithSameSite(sameSite http.SameSite) cookieStoreOption {
+func WithSameSite(sameSite http.SameSite) CookieStoreOption {
 	return func(cs *CookieStore) {
 		cs.sameSite = sameSite
 	}
@@ -57,7 +57,7 @@ type CookieStore struct {
 }
 
 // NewCookieStore initializes a new CookieStore with optional configurations.
-func NewCookieStore(options ...cookieStoreOption) *CookieStore {
+func NewCookieStore(options ...CookieStoreOption) *CookieStore {
 	cs := &CookieStore{
 		path:     defaultPath,
 		domain:   "",
