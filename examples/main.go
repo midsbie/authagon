@@ -80,7 +80,7 @@ func main() {
 			Audience:    audience,
 			RedirectURL: r.URL.Query().Get("redirect_to"),
 		}
-		if herr := prov.Begin(w, r, config); err != nil {
+		if herr := prov.Begin(w, r, config); herr != nil {
 			http.Error(w, herr.Message, herr.Status)
 		}
 	})
