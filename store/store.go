@@ -12,8 +12,8 @@ type BrowserStorer interface {
 }
 
 type SessionStorer interface {
+	Exists(sid string) (bool, error)
 	Set(sid string, value interface{}, duration time.Duration) error
 	Get(sid string) (interface{}, error)
-	Exists(sid string) (bool, error)
 	Del(sid string) error
 }
