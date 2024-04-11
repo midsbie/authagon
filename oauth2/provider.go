@@ -14,8 +14,8 @@ import (
 type Provider interface {
 	Name() string
 	Configure(config ServiceConfig)
-	Begin(w http.ResponseWriter, r *http.Request, config AuthConfig) *secutil.HTTPError
-	Finish(w http.ResponseWriter, r *http.Request) (*AuthResult, *secutil.HTTPError)
+	Begin(w http.ResponseWriter, r *http.Request, config AuthConfig) error
+	Finish(w http.ResponseWriter, r *http.Request) (*AuthResult, error)
 }
 
 type ProfileMapper interface {
@@ -109,11 +109,10 @@ func (p *StandardProvider) Name() string {
 }
 
 func (p *StandardProvider) Begin(w http.ResponseWriter, r *http.Request,
-	config AuthConfig) *secutil.HTTPError {
+	config AuthConfig) error {
 	auth, err := p.session.Set(w, r, config)
 	if err != nil {
-		return secutil.NewHTTPError(http.StatusInternalServerError,
-			"failed to set session", err)
+		return secutil.NewInternalServerError("failed to set session", err)
 	}
 
 	conf := p.configure()
@@ -125,19 +124,17 @@ func (p *StandardProvider) Begin(w http.ResponseWriter, r *http.Request,
 }
 
 func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (
-	*AuthResult, *secutil.HTTPError) {
+	*AuthResult, error) {
 	receivedState := r.URL.Query().Get("state")
 	if receivedState == "" {
-		return nil, secutil.NewHTTPError(http.StatusBadRequest, "state missing", nil)
+		return nil, secutil.NewBadRequestError("state missing", nil)
 	}
 
 	session, err := p.session.Get(r)
 	if err != nil {
-		return nil, secutil.NewHTTPError(http.StatusInternalServerError,
-			"failed to get token", err)
+		return nil, secutil.NewInternalServerError("failed to get token", err)
 	} else if session.State != receivedState {
-		return nil, secutil.NewHTTPError(http.StatusInternalServerError,
-			"unexpected state", nil)
+		return nil, secutil.NewInternalServerError("unexpected state", nil)
 	} else if err = p.session.Del(w); err != nil {
 		// log.Printf("failed to delete auth session: %s", err.Error())
 	}
@@ -145,14 +142,13 @@ func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (
 	conf := p.configure()
 	token, err := conf.Exchange(context.Background(), r.URL.Query().Get("code"))
 	if err != nil {
-		return nil, secutil.NewHTTPError(http.StatusBadRequest, "exchange failed", err)
+		return nil, secutil.NewBadRequestError("exchange failed", err)
 	}
 
 	client := conf.Client(context.Background(), token)
 	preq, err := client.Get(p.endpoint.ProfileURL)
 	if err != nil {
-		return nil, secutil.NewHTTPError(http.StatusInternalServerError,
-			"failed to get profile", err)
+		return nil, secutil.NewInternalServerError("failed to get profile", err)
 	}
 
 	defer func() {
@@ -163,20 +159,17 @@ func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (
 
 	byteProfile, err := io.ReadAll(preq.Body)
 	if err != nil {
-		return nil, secutil.NewHTTPError(http.StatusInternalServerError,
-			"failed to read profile", err)
+		return nil, secutil.NewInternalServerError("failed to read profile", err)
 	}
 
 	mappedProfile := map[string]interface{}{}
 	if err := json.Unmarshal(byteProfile, &mappedProfile); err != nil {
-		return nil, secutil.NewHTTPError(http.StatusInternalServerError,
-			"failed to unmarshal profile", err)
+		return nil, secutil.NewInternalServerError("failed to unmarshal profile", err)
 	}
 
 	profile, err := p.mapper.MapProfile(mappedProfile, byteProfile)
 	if err != nil {
-		return nil, secutil.NewHTTPError(http.StatusInternalServerError,
-			"failed to map profile", err)
+		return nil, secutil.NewInternalServerError("failed to map profile", err)
 	}
 
 	return &AuthResult{

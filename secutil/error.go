@@ -1,42 +1,83 @@
 package secutil
 
 import (
-	"errors"
-	"fmt"
+	"net/http"
 )
 
-type HTTPError struct {
-	Status      int
-	Message     string
-	InternalErr error
+type HTTPError interface {
+	error
+	Status() int
+	Unwrap() error
 }
 
-// Error implements the Error interface.
-func (e *HTTPError) Error() string {
-	return e.Message
+// httpError struct defines a structure for HTTP errors that includes a status code and a message.
+type httpError struct {
+	status  int
+	message string
+	err     error
 }
 
-// NewHTTPError creates a new HTTPError instance.
-func NewHTTPError(status int, message string, internalErr error) *HTTPError {
-	return &HTTPError{Status: status, Message: message, InternalErr: internalErr}
+// Error implements the error interface.
+func (h *httpError) Error() string {
+	return h.message
 }
 
-// Wrap creates a new HTTPError instance, transitioning from the prior approach of using a single
-// `error` to wrap both a user-friendly message and an internal error. Before HTTPError, errors were
-// wrapped with `fmt.Errorf`, combining a message (now `Message`) and an underlying error
-// (`InternalErr`) into one. HTTPError separates these for clearer HTTP response handling: `Message`
-// for client-facing communication and `InternalErr` for internal logging or processing. Wrap
-// preserves this separation, making it suitable for HTTP scenarios where both types of error
-// information are valuable.
-func (e *HTTPError) Wrap() error {
-	if e.InternalErr != nil {
-		return fmt.Errorf("%s: %w", e.Message, e.InternalErr)
+// Unwrap returns the underlying error.
+func (h *httpError) Unwrap() error {
+	return h.err
+}
+
+// Status implements the HTTPError interface. It returns the HTTP status code of the error.
+func (h *httpError) Status() int {
+	return h.status
+}
+
+// NewHTTPError creates a new httpError with the specified status, message, and underlying error.
+func NewHTTPError(status int, message string, err error) *httpError {
+	return &httpError{status: status, message: message, err: err}
+}
+
+// NewInternalServerError creates a new Internal Server Error (500) httpError.
+func NewInternalServerError(msg string, err error) *httpError {
+	return &httpError{
+		status:  http.StatusInternalServerError,
+		message: msg,
+		err:     err,
 	}
-
-	return errors.New(e.Message)
 }
 
-// Unwrap provides compatibility with errors.Unwrap by returning the embedded error.
-func (e *HTTPError) Unwrap() error {
-	return e.InternalErr
+// NewBadRequestError creates a new BadRequest (400) httpError.
+func NewBadRequestError(msg string, err error) *httpError {
+	return &httpError{
+		status:  http.StatusBadRequest,
+		message: msg,
+		err:     err,
+	}
+}
+
+// NewUnauthorizedError creates a new Unauthorized (401) httpError.
+func NewUnauthorizedError(msg string, err error) *httpError {
+	return &httpError{
+		status:  http.StatusUnauthorized,
+		message: msg,
+		err:     err,
+	}
+}
+
+// NewNotFoundError creates a new NotFound (404) httpError.
+func NewNotFoundError(msg string, err error) *httpError {
+	return &httpError{
+		status:  http.StatusNotFound,
+		message: msg,
+		err:     err,
+	}
+}
+
+func ResolveHTTPError(err error, defaultErrFunc func() error) error {
+	if err == nil {
+		return nil
+	} else if nerr, ok := err.(HTTPError); ok {
+		return nerr
+	}
+	return defaultErrFunc()
 }

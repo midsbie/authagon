@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/midsbie/authagon/oauth2"
+	"github.com/midsbie/authagon/secutil"
 	"github.com/midsbie/authagon/store"
 )
 
@@ -80,8 +81,8 @@ func main() {
 			Audience:    audience,
 			RedirectURL: r.URL.Query().Get("redirect_to"),
 		}
-		if herr := prov.Begin(w, r, config); herr != nil {
-			http.Error(w, herr.Message, herr.Status)
+		if err := prov.Begin(w, r, config); err != nil {
+			handleError(err, w)
 		}
 	})
 
@@ -93,9 +94,9 @@ func main() {
 			return
 		}
 
-		result, herr := prov.Finish(w, r)
-		if herr != nil {
-			http.Error(w, herr.Message, herr.Status)
+		result, err := prov.Finish(w, r)
+		if err != nil {
+			handleError(err, w)
 			return
 		}
 
@@ -112,9 +113,9 @@ func main() {
 	})
 
 	r.Get("/profile", func(w http.ResponseWriter, r *http.Request) {
-		sess, herr := sessionCtl.Get(r)
-		if herr != nil {
-			http.Error(w, herr.Message, herr.Status)
+		sess, err := sessionCtl.Get(r)
+		if err != nil {
+			handleError(err, w)
 			return
 		}
 
@@ -130,8 +131,8 @@ func main() {
 	})
 
 	r.Get("/logout", func(w http.ResponseWriter, r *http.Request) {
-		if herr := sessionCtl.Del(w, r); herr != nil {
-			http.Error(w, herr.Message, herr.Status)
+		if err := sessionCtl.Del(w, r); err != nil {
+			handleError(err, w)
 			return
 		}
 
@@ -155,6 +156,22 @@ func getProviderRegistry() *ProviderRegistry {
 	sort.Strings(keys)
 
 	return &ProviderRegistry{Providers: keys, ProvidersMap: m}
+}
+
+func handleError(err error, w http.ResponseWriter) {
+	if err == nil {
+		return
+	} else if nerr, ok := err.(secutil.HTTPError); ok {
+		if werr := nerr.Unwrap(); werr != nil {
+			log.Printf("%d %s: %s", nerr.Status(), nerr.Error(), werr.Error())
+		} else {
+			log.Printf("%d %s", nerr.Status(), nerr.Error())
+		}
+		http.Error(w, nerr.Error(), nerr.Status())
+		return
+	}
+
+	http.Error(w, "Internal server error", http.StatusInternalServerError)
 }
 
 var indexAnonTpl = `
