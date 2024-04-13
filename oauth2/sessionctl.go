@@ -76,39 +76,27 @@ func (s *SessionCtl) Set(w http.ResponseWriter, a AuthResult) (string, error) {
 	return "", fmt.Errorf("failed to create session: %w", err)
 }
 
-func (s *SessionCtl) Get(r *http.Request) (interface{}, error) {
-	sid, ok, err := s.browserStore.Get(r, s.sessionIDKey)
+func (s *SessionCtl) Get(r *http.Request) (interface{}, bool, error) {
+	sid, ok, err := s.GetSessionID(r)
 	if err != nil {
-		return false, err
+		return false, false, err
 	} else if !ok {
-		return false, ErrUnauthenticated
+		return false, false, ErrUnauthenticated
 	}
 
-	ab, err := s.sessionStore.Get(sid)
+	ab, ok, err := s.sessionStore.Get(sid)
 	if err != nil {
-		return AuthResult{}, fmt.Errorf("failed to retrieve session: %w", err)
-	}
-
-	return ab, nil
-}
-
-func (s *SessionCtl) Exists(r *http.Request) (bool, error) {
-	sid, ok, err := s.browserStore.Get(r, s.sessionIDKey)
-	if err != nil {
-		return false, err
+		return AuthResult{}, false, fmt.Errorf(
+			"error retrieving session (sid=%s) from store: %s", sid, err.Error())
 	} else if !ok {
-		return false, nil
+		return AuthResult{}, false, nil
 	}
 
-	ok, err = s.sessionStore.Exists(sid)
-	if err != nil {
-		return false, fmt.Errorf("failed to query session: %w", err)
-	}
-	return ok, nil
+	return ab, true, nil
 }
 
 func (s *SessionCtl) Del(w http.ResponseWriter, r *http.Request) error {
-	sid, ok, err := s.browserStore.Get(r, s.sessionIDKey)
+	sid, ok, err := s.GetSessionID(r)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -124,7 +112,7 @@ func (s *SessionCtl) Del(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (s *SessionCtl) getSessionID(r *http.Request) (string, bool, error) {
+func (s *SessionCtl) GetSessionID(r *http.Request) (string, bool, error) {
 	sid, ok, err := s.browserStore.Get(r, s.sessionIDKey)
 	if err != nil {
 		return "", false, fmt.Errorf("failed to retrieve session ID: %w", err)

@@ -48,7 +48,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		if ok, err := sessionCtl.Exists(r); err != nil {
+		if _, ok, err := sessionCtl.Get(r); err != nil {
 			handleError(err, w)
 			return
 		} else if ok {

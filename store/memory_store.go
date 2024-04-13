@@ -21,12 +21,12 @@ func (s *MemoryStore) Set(sid string, value interface{}, duration time.Duration)
 	return nil
 }
 
-func (s *MemoryStore) Get(sid string) (interface{}, error) {
+func (s *MemoryStore) Get(sid string) (interface{}, bool, error) {
 	if a, ok := s.sessions[sid]; ok {
-		return a, nil
+		return a, true, nil
 	}
 
-	return nil, fmt.Errorf("session not found: %s", sid)
+	return nil, false, fmt.Errorf("session not found: %s", sid)
 }
 
 func (s *MemoryStore) Exists(sid string) (bool, error) {
