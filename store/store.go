@@ -7,7 +7,7 @@ import (
 
 type BrowserStorer interface {
 	Set(w http.ResponseWriter, name, value string, duration time.Duration) error
-	Get(r *http.Request, name string) (string, error)
+	Get(r *http.Request, name string) (string, bool, error)
 	Del(w http.ResponseWriter, name string) error
 }
 

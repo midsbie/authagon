@@ -82,12 +82,16 @@ func (cs *CookieStore) Set(w http.ResponseWriter, name, value string, duration t
 
 // Get retrieves the value of a cookie with the specified name from the *http.Request.  This method
 // is used to access cookie values sent by the client in HTTP requests.
-func (cs *CookieStore) Get(r *http.Request, name string) (string, error) {
+func (cs *CookieStore) Get(r *http.Request, name string) (string, bool, error) {
 	cookie, err := r.Cookie(name)
 	if err != nil {
-		return "", err
+		if err == http.ErrNoCookie {
+			return "", false, nil
+		}
+
+		return "", false, err
 	}
-	return cookie.Value, nil
+	return cookie.Value, true, nil
 }
 
 // Del deletes a cookie with the specified name by setting its expiration date to a time in the

@@ -1,7 +1,6 @@
 package oauth2
 
 import (
-	"github.com/midsbie/authagon/secutil"
 	"golang.org/x/oauth2/google"
 )
 
@@ -31,7 +30,7 @@ func NewGoogle(clientID, clientSecret string, options ...StandardProviderOption)
 }
 
 func (p *googleProvider) MapProfile(data ParsedProfile, _ []byte) (Profile, error) {
-	id, err := secutil.HashID(p.name + "_" + data.String("sub"))
+	id, err := HashID(p.name + "_" + data.String("sub"))
 	if err != nil {
 		return Profile{}, err
 	}

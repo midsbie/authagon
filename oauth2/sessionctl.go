@@ -1,11 +1,11 @@
 package oauth2
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/midsbie/authagon/secutil"
 	"github.com/midsbie/authagon/store"
 )
 
@@ -52,14 +52,13 @@ func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionS
 }
 
 func (s *SessionCtl) Set(w http.ResponseWriter, a AuthResult) (string, error) {
-	sid, err := secutil.RandomToken(defaultSessionIdLength)
+	sid, err := RandomToken(defaultSessionIdLength)
 	if err != nil {
-		return "", secutil.NewInternalServerError("failed to generate session ID", err)
+		return "", errors.New("failed to generate session ID")
 	}
 
 	if err = s.browserStore.Set(w, s.sessionIDKey, sid, s.sessionDuration); err != nil {
-		return "", secutil.NewInternalServerError(
-			"failed to persist session ID in browser store", err)
+		return "", fmt.Errorf("failed to create session cookie: %w", err)
 	} else if err = s.sessionStore.Set(sid, a, s.sessionDuration); err == nil {
 		return sid, nil
 	}
@@ -74,58 +73,66 @@ func (s *SessionCtl) Set(w http.ResponseWriter, a AuthResult) (string, error) {
 	// TODO: handle case where we fail to delete from the browser store, perhaps by logging a
 	// warning?
 	s.browserStore.Del(w, s.sessionIDKey)
-	return "", secutil.ResolveHTTPError(err, func() error {
-		return secutil.NewInternalServerError("failed to persist session in store", err)
-	})
+	return "", fmt.Errorf("failed to create session: %w", err)
 }
 
 func (s *SessionCtl) Get(r *http.Request) (interface{}, error) {
-	sid, err := s.browserStore.Get(r, s.sessionIDKey)
+	sid, ok, err := s.browserStore.Get(r, s.sessionIDKey)
 	if err != nil {
-		return AuthResult{}, secutil.NewUnauthorizedError("not authenticated", err)
+		return false, err
+	} else if !ok {
+		return false, ErrUnauthenticated
 	}
 
 	ab, err := s.sessionStore.Get(sid)
 	if err != nil {
-		return AuthResult{}, secutil.ResolveHTTPError(err, func() error {
-			return secutil.NewNotFoundError("session not found", err)
-		})
+		return AuthResult{}, fmt.Errorf("failed to retrieve session: %w", err)
 	}
 
 	return ab, nil
 }
 
 func (s *SessionCtl) Exists(r *http.Request) (bool, error) {
-	sid, err := s.browserStore.Get(r, s.sessionIDKey)
+	sid, ok, err := s.browserStore.Get(r, s.sessionIDKey)
 	if err != nil {
 		return false, err
-	} else if sid == "" {
-		return false, fmt.Errorf("invalid session ID")
+	} else if !ok {
+		return false, nil
 	}
 
-	ok, err := s.sessionStore.Exists(sid)
+	ok, err = s.sessionStore.Exists(sid)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to query session: %w", err)
 	}
 	return ok, nil
 }
 
 func (s *SessionCtl) Del(w http.ResponseWriter, r *http.Request) error {
-	sid, err := s.browserStore.Get(r, s.sessionIDKey)
+	sid, ok, err := s.browserStore.Get(r, s.sessionIDKey)
 	if err != nil {
-		return secutil.NewUnauthorizedError("not authenticated", err)
-	} else if err := s.sessionStore.Del(sid); err != nil {
-		return secutil.ResolveHTTPError(err, func() error {
-			return secutil.NewInternalServerError(
-				"failed to delete session from store", err)
-		})
-	} else if err := s.browserStore.Del(w, s.sessionIDKey); err != nil {
-		return secutil.NewInternalServerError("failed to delete browser session", err)
+		return err
+	} else if !ok {
+		return ErrUnauthenticated
+	}
+
+	if err = s.sessionStore.Del(sid); err != nil {
+		return fmt.Errorf("failed to delete session (%s): %w", sid, err)
+	} else if err = s.browserStore.Del(w, s.sessionIDKey); err != nil {
+		return fmt.Errorf("failed to delete session cookie (%s): %w", sid, err)
 	}
 
 	return nil
 }
 
-func (s *SessionCtl) SessionIDKey() string {
-	return s.sessionIDKey
+func (s *SessionCtl) getSessionID(r *http.Request) (string, bool, error) {
+	sid, ok, err := s.browserStore.Get(r, s.sessionIDKey)
+	if err != nil {
+		return "", false, fmt.Errorf("failed to retrieve session ID: %w", err)
+	} else if !ok {
+		return "", false, nil
+	} else if sid == "" {
+		return "", false, fmt.Errorf("invalid session ID")
+	}
+
+	return sid, true, nil
 }

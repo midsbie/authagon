@@ -10,12 +10,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/midsbie/authagon/oauth2"
-	"github.com/midsbie/authagon/secutil"
 	"github.com/midsbie/authagon/store"
 )
 
 const (
-	port             = "8081"
+	port             = "3000"
 	jwtSessionSecret = "foobarbaz"
 	audience         = "authagon"
 )
@@ -27,8 +26,8 @@ type ProviderRegistry struct {
 
 func main() {
 	googleProvider := oauth2.NewGoogle(
-		os.Getenv("AUTH_OAUTH_PROVIDER_GOOGLE_KEY"),
-		os.Getenv("AUTH_OAUTH_PROVIDER_GOOGLE_SECRET"))
+		mustGetenv("AUTH_OAUTH_PROVIDER_GOOGLE_KEY"),
+		mustGetenv("AUTH_OAUTH_PROVIDER_GOOGLE_SECRET"))
 
 	cookieStore := store.NewCookieStore(store.WithSecure(false))
 	jwts, err := oauth2.NewJWTSession(cookieStore, jwtSessionSecret,
@@ -50,7 +49,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		if ok, err := sessionCtl.Exists(r); err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			handleError(err, w)
 			return
 		} else if ok {
 			t, _ := template.New("authenticated").Parse(indexAuthTpl)
@@ -60,12 +59,12 @@ func main() {
 
 		t, err := template.New("index").Parse(indexAnonTpl)
 		if err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			handleError(err, w)
 			return
 		}
 
 		if err := t.Execute(w, providerRegistry); err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			handleError(err, w)
 		}
 	})
 
@@ -73,7 +72,7 @@ func main() {
 		name := chi.URLParam(r, "provider")
 		prov, err := svc.GetProvider(name)
 		if err != nil {
-			http.Error(w, "Provider not found", http.StatusNotFound)
+			handleError(err, w)
 			return
 		}
 
@@ -81,6 +80,7 @@ func main() {
 			Audience:    audience,
 			RedirectURL: r.URL.Query().Get("redirect_to"),
 		}
+
 		if err := prov.Begin(w, r, config); err != nil {
 			handleError(err, w)
 		}
@@ -90,7 +90,7 @@ func main() {
 		name := chi.URLParam(r, "provider")
 		prov, err := svc.GetProvider(name)
 		if err != nil {
-			http.Error(w, "Provider not found", http.StatusNotFound)
+			handleError(err, w)
 			return
 		}
 
@@ -100,12 +100,13 @@ func main() {
 			return
 		}
 
-		if sid, err := sessionCtl.Set(w, *result); err != nil {
-			http.Error(w, "Failed to create session", http.StatusInternalServerError)
+		sid, err := sessionCtl.Set(w, *result)
+		if err != nil {
+			handleError(err, w)
 			return
-		} else {
-			fmt.Printf("Session created: %s\n", sid)
 		}
+
+		fmt.Printf("Session created: %s\n", sid)
 
 		if result.RedirectURL != "" {
 			http.Redirect(w, r, result.RedirectURL, http.StatusTemporaryRedirect)
@@ -121,12 +122,12 @@ func main() {
 
 		t, err := template.New("profile").Parse(profileTpl)
 		if err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			handleError(err, w)
 			return
 		}
 
 		if err := t.Execute(w, sess); err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			handleError(err, w)
 		}
 	})
 
@@ -159,19 +160,17 @@ func getProviderRegistry() *ProviderRegistry {
 }
 
 func handleError(err error, w http.ResponseWriter) {
-	if err == nil {
-		return
-	} else if nerr, ok := err.(secutil.HTTPError); ok {
-		if werr := nerr.Unwrap(); werr != nil {
-			log.Printf("%d %s: %s", nerr.Status(), nerr.Error(), werr.Error())
-		} else {
-			log.Printf("%d %s", nerr.Status(), nerr.Error())
-		}
-		http.Error(w, nerr.Error(), nerr.Status())
-		return
+	log.Println(err.Error())
+	http.Error(w, "Internal server error", http.StatusInternalServerError)
+}
+
+func mustGetenv(key string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		panic(fmt.Sprintf("Env var %s required", key))
 	}
 
-	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	return v
 }
 
 var indexAnonTpl = `

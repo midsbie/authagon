@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/midsbie/authagon/secutil"
 	"github.com/midsbie/authagon/store"
 )
 
@@ -123,12 +122,12 @@ func NewJWTSession(store store.BrowserStorer, secret string, options ...option) 
 
 func (s *JWTSession) Set(w http.ResponseWriter, r *http.Request, config AuthConfig) (
 	AuthState, error) {
-	state, err := secutil.RandomToken(randomTokenLen)
+	state, err := RandomToken(randomTokenLen)
 	if err != nil {
 		return AuthState{}, fmt.Errorf("failed to generate oauth2 state: %w", err)
 	}
 
-	nonce, err := secutil.RandomToken(randomTokenLen)
+	nonce, err := RandomToken(randomTokenLen)
 	if err != nil {
 		return AuthState{}, fmt.Errorf("failed to generate nonce: %w", err)
 	}
@@ -168,9 +167,11 @@ func (s *JWTSession) Set(w http.ResponseWriter, r *http.Request, config AuthConf
 }
 
 func (s *JWTSession) Get(r *http.Request) (AuthState, error) {
-	tokenString, err := s.store.Get(r, s.sessionKey)
+	tokenString, ok, err := s.store.Get(r, s.sessionKey)
 	if err != nil {
 		return AuthState{}, err
+	} else if !ok {
+		return AuthState{}, ErrUnauthenticated
 	}
 
 	parser := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Alg()}}

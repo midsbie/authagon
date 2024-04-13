@@ -1,4 +1,4 @@
-package secutil
+package oauth2
 
 import (
 	"crypto/rand"
