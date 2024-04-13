@@ -12,7 +12,7 @@ import (
 const (
 	DefaultSessionIDKey    = "sid"
 	defaultSessionDuration = 24 * time.Hour
-	defaultSessionIdLength = 32
+	defaultSessionIDLength = 32
 )
 
 // sessionCtlOption is the type for functional options.
@@ -24,6 +24,12 @@ func WithSessionIDKey(sessionIDKey string) sessionCtlOption {
 	}
 }
 
+func WithSessionIDKeyLen(len int) sessionCtlOption {
+	return func(sc *SessionCtl) {
+		sc.sessionIDKeyLen = len
+	}
+}
+
 func WithSessionDuration(sessionDuration time.Duration) sessionCtlOption {
 	return func(sc *SessionCtl) {
 		sc.sessionDuration = sessionDuration
@@ -32,6 +38,7 @@ func WithSessionDuration(sessionDuration time.Duration) sessionCtlOption {
 
 type SessionCtl struct {
 	sessionIDKey    string
+	sessionIDKeyLen int
 	sessionDuration time.Duration
 	browserStore    store.BrowserStorer
 	sessionStore    store.SessionStorer
@@ -41,6 +48,7 @@ func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionS
 	options ...sessionCtlOption) *SessionCtl {
 	sc := &SessionCtl{
 		sessionIDKey:    DefaultSessionIDKey,
+		sessionIDKeyLen: defaultSessionIDLength,
 		sessionDuration: defaultSessionDuration,
 		browserStore:    browserStore,
 		sessionStore:    sessionStore}
@@ -52,7 +60,7 @@ func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionS
 }
 
 func (s *SessionCtl) Set(w http.ResponseWriter, a AuthResult) (string, error) {
-	sid, err := RandomToken(defaultSessionIdLength)
+	sid, err := RandomToken(s.sessionIDKeyLen)
 	if err != nil {
 		return "", errors.New("failed to generate session ID")
 	}
