@@ -79,7 +79,7 @@ func (s *SessionCtl) Set(w http.ResponseWriter, a AuthResult) (string, error) {
 	})
 }
 
-func (s *SessionCtl) Get(r *http.Request) (AuthResult, error) {
+func (s *SessionCtl) Get(r *http.Request) (interface{}, error) {
 	sid, err := s.browserStore.Get(r, s.sessionIDKey)
 	if err != nil {
 		return AuthResult{}, secutil.NewUnauthorizedError("not authenticated", err)
@@ -92,13 +92,7 @@ func (s *SessionCtl) Get(r *http.Request) (AuthResult, error) {
 		})
 	}
 
-	a, ok := ab.(AuthResult)
-	if !ok {
-		return AuthResult{}, secutil.NewInternalServerError(
-			"failed to convert session", fmt.Errorf("session ID: %s", sid))
-	}
-
-	return a, nil
+	return ab, nil
 }
 
 func (s *SessionCtl) Exists(r *http.Request) (bool, error) {
