@@ -76,8 +76,8 @@ func NewNotFoundError(msg string, err error) *httpError {
 func ResolveHTTPError(err error, defaultErrFunc func() error) error {
 	if err == nil {
 		return nil
-	} else if nerr, ok := err.(HTTPError); ok {
-		return nerr
+	} else if _, ok := err.(HTTPError); ok {
+		return err
 	}
 	return defaultErrFunc()
 }
