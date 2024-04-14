@@ -39,6 +39,8 @@ func main() {
 	svc := oauth2.NewService(oauth2.ServiceConfig{
 		BaseURL: "http://localhost:" + port,
 		Session: jwts,
+		// Customize this to match your settings.
+		CallbackPathTemplate: oauth2.DefaultCallbackPathTemplate,
 	})
 	svc.Register(googleProvider)
 
