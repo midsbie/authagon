@@ -89,7 +89,7 @@ func (s *SessionCtl) Get(r *http.Request) (interface{}, bool, error) {
 	if err != nil {
 		return false, false, err
 	} else if !ok {
-		return false, false, ErrUnauthenticated
+		return false, false, nil
 	}
 
 	ab, ok, err := s.sessionStore.Get(sid)
