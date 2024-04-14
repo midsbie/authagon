@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -59,7 +60,7 @@ func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionS
 	return sc
 }
 
-func (s *SessionCtl) Set(w http.ResponseWriter, a AuthResult) (string, error) {
+func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter, a AuthResult) (string, error) {
 	sid, err := RandomToken(s.sessionIDKeyLen)
 	if err != nil {
 		return "", errors.New("failed to generate session ID")
@@ -67,7 +68,7 @@ func (s *SessionCtl) Set(w http.ResponseWriter, a AuthResult) (string, error) {
 
 	if err = s.browserStore.Set(w, s.sessionIDKey, sid, s.sessionDuration); err != nil {
 		return "", fmt.Errorf("failed to create session cookie: %w", err)
-	} else if err = s.sessionStore.Set(sid, a, s.sessionDuration); err == nil {
+	} else if err = s.sessionStore.Set(ctx, sid, a, s.sessionDuration); err == nil {
 		return sid, nil
 	}
 
@@ -84,7 +85,7 @@ func (s *SessionCtl) Set(w http.ResponseWriter, a AuthResult) (string, error) {
 	return "", fmt.Errorf("failed to create session: %w", err)
 }
 
-func (s *SessionCtl) Get(r *http.Request) (interface{}, bool, error) {
+func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (interface{}, bool, error) {
 	sid, ok, err := s.GetSessionID(r)
 	if err != nil {
 		return false, false, err
@@ -92,7 +93,7 @@ func (s *SessionCtl) Get(r *http.Request) (interface{}, bool, error) {
 		return false, false, nil
 	}
 
-	ab, ok, err := s.sessionStore.Get(sid)
+	ab, ok, err := s.sessionStore.Get(ctx, sid)
 	if err != nil {
 		return AuthResult{}, false, fmt.Errorf(
 			"error retrieving session (sid=%s) from store: %s", sid, err.Error())
@@ -103,7 +104,7 @@ func (s *SessionCtl) Get(r *http.Request) (interface{}, bool, error) {
 	return ab, true, nil
 }
 
-func (s *SessionCtl) Del(w http.ResponseWriter, r *http.Request) error {
+func (s *SessionCtl) Del(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	sid, ok, err := s.GetSessionID(r)
 	if err != nil {
 		return err
@@ -111,7 +112,7 @@ func (s *SessionCtl) Del(w http.ResponseWriter, r *http.Request) error {
 		return ErrUnauthenticated
 	}
 
-	if err = s.sessionStore.Del(sid); err != nil {
+	if err = s.sessionStore.Del(ctx, sid); err != nil {
 		return fmt.Errorf("failed to delete session (%s): %w", sid, err)
 	} else if err = s.browserStore.Del(w, s.sessionIDKey); err != nil {
 		return fmt.Errorf("failed to delete session cookie (%s): %w", sid, err)

@@ -48,8 +48,8 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		if _, ok, err := sessionCtl.Get(r); err != nil {
-			handleError(err, w)
+		if _, ok, err := sessionCtl.Get(r.Context(), r); err != nil {
+			handleInternalError(err, w)
 			return
 		} else if ok {
 			t, _ := template.New("authenticated").Parse(indexAuthTpl)
@@ -59,12 +59,12 @@ func main() {
 
 		t, err := template.New("index").Parse(indexAnonTpl)
 		if err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
 			return
 		}
 
 		if err := t.Execute(w, providerRegistry); err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
 		}
 	})
 
@@ -72,7 +72,7 @@ func main() {
 		name := chi.URLParam(r, "provider")
 		prov, err := svc.GetProvider(name)
 		if err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
 			return
 		}
 
@@ -82,7 +82,7 @@ func main() {
 		}
 
 		if err := prov.Begin(w, r, config); err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
 		}
 	})
 
@@ -90,23 +90,23 @@ func main() {
 		name := chi.URLParam(r, "provider")
 		prov, err := svc.GetProvider(name)
 		if err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
 			return
 		}
 
 		result, err := prov.Finish(w, r)
 		if err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
 			return
 		}
 
-		sid, err := sessionCtl.Set(w, *result)
+		sid, err := sessionCtl.Set(r.Context(), w, *result)
 		if err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
 			return
 		}
 
-		fmt.Printf("Session created: %s\n", sid)
+		log.Printf("Session created: %s\n", sid)
 
 		if result.RedirectURL != "" {
 			http.Redirect(w, r, result.RedirectURL, http.StatusTemporaryRedirect)
@@ -114,26 +114,29 @@ func main() {
 	})
 
 	r.Get("/profile", func(w http.ResponseWriter, r *http.Request) {
-		sess, err := sessionCtl.Get(r)
+		sess, ok, err := sessionCtl.Get(r.Context(), r)
 		if err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
+			return
+		} else if !ok {
+			http.Error(w, "Not Authenticated", http.StatusUnauthorized)
 			return
 		}
 
 		t, err := template.New("profile").Parse(profileTpl)
 		if err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
 			return
 		}
 
 		if err := t.Execute(w, sess); err != nil {
-			handleError(err, w)
+			handleInternalError(err, w)
 		}
 	})
 
 	r.Get("/logout", func(w http.ResponseWriter, r *http.Request) {
-		if err := sessionCtl.Del(w, r); err != nil {
-			handleError(err, w)
+		if err := sessionCtl.Del(r.Context(), w, r); err != nil {
+			handleInternalError(err, w)
 			return
 		}
 
@@ -159,7 +162,7 @@ func getProviderRegistry() *ProviderRegistry {
 	return &ProviderRegistry{Providers: keys, ProvidersMap: m}
 }
 
-func handleError(err error, w http.ResponseWriter) {
+func handleInternalError(err error, w http.ResponseWriter) {
 	log.Println(err.Error())
 	http.Error(w, "Internal server error", http.StatusInternalServerError)
 }

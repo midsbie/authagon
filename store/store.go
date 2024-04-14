@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"net/http"
 	"time"
 )
@@ -12,7 +13,7 @@ type BrowserStorer interface {
 }
 
 type SessionStorer interface {
-	Set(sid string, value interface{}, duration time.Duration) error
-	Get(sid string) (interface{}, bool, error)
-	Del(sid string) error
+	Set(ctx context.Context, sid string, value interface{}, duration time.Duration) error
+	Get(ctx context.Context, sid string) (interface{}, bool, error)
+	Del(ctx context.Context, sid string) error
 }
