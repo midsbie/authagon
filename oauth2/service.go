@@ -39,7 +39,7 @@ func (s *OAuth2Service) Register(provider Provider) {
 
 func (s *OAuth2Service) GetProvider(name string) (Provider, error) {
 	if name == "" {
-		return nil, fmt.Errorf("no provider name specified")
+		return nil, ErrNoProvider
 	} else if prov, ok := s.providers[name]; !ok {
 		return nil, fmt.Errorf("invalid provider name specified: %s", name)
 	} else {
