@@ -17,9 +17,10 @@ func NewMemoryStore() *MemoryStore {
 		sessions: map[string]interface{}{}}
 }
 
-func (s *MemoryStore) Set(ctx context.Context, sid string, value interface{}, duration time.Duration) error {
+func (s *MemoryStore) Set(ctx context.Context, sid string, value interface{},
+	duration time.Duration) *SetSessionResponse {
 	s.sessions[sid] = value
-	return nil
+	return &SetSessionResponse{SID: sid}
 }
 
 func (s *MemoryStore) Get(ctx context.Context, sid string) (interface{}, bool, error) {
