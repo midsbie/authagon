@@ -6,10 +6,8 @@ import (
 )
 
 var (
-	_ Provider         = (*googleProvider)(nil)
-	_ Provider         = (*microsoftProvider)(nil)
-	_ ProfileExtractor = (*googleProvider)(nil)
-	_ ProfileExtractor = (*microsoftProvider)(nil)
+	_ Provider = (*googleProvider)(nil)
+	_ Provider = (*microsoftProvider)(nil)
 )
 
 type googleProvider struct {
@@ -17,7 +15,7 @@ type googleProvider struct {
 }
 
 func NewGoogle(clientID, clientSecret string, options ...StandardProviderOption) *googleProvider {
-	p := &googleProvider{
+	return &googleProvider{
 		StandardProvider{
 			name: "google",
 			endpoints: endpoints{
@@ -28,8 +26,6 @@ func NewGoogle(clientID, clientSecret string, options ...StandardProviderOption)
 			config: NewProviderConfig(clientID, clientSecret, options),
 		},
 	}
-	p.mapper = p
-	return p
 }
 
 func (p *googleProvider) ExtractProfile(data ProfileMap, _ []byte) (Profile, error) {
@@ -56,7 +52,7 @@ type microsoftProvider struct {
 }
 
 func NewMicrosoft(clientID, clientSecret string, options ...StandardProviderOption) *microsoftProvider {
-	p := &microsoftProvider{
+	return &microsoftProvider{
 		StandardProvider{
 			name: "microsoft",
 			endpoints: endpoints{
@@ -67,8 +63,6 @@ func NewMicrosoft(clientID, clientSecret string, options ...StandardProviderOpti
 			config: NewProviderConfig(clientID, clientSecret, options),
 		},
 	}
-	p.mapper = p
-	return p
 }
 
 func (p *microsoftProvider) ExtractProfile(data ProfileMap, _ []byte) (Profile, error) {

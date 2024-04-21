@@ -72,9 +72,9 @@ func main() {
 		}
 	})
 
-	r.Get("/auth/{provider}", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/u/auth/{provider}", func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "provider")
-		prov, err := svc.GetProvider(name)
+		auth, err := svc.Authenticator(name)
 		if err != nil {
 			handleInternalError(err, w)
 			return
@@ -85,20 +85,20 @@ func main() {
 			RedirectURL: r.URL.Query().Get("redirect_to"),
 		}
 
-		if err := prov.Begin(w, r, config); err != nil {
+		if err := auth.Begin(w, r, config); err != nil {
 			handleInternalError(err, w)
 		}
 	})
 
-	r.Get("/auth/{provider}/callback", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/u/auth/{provider}/callback", func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "provider")
-		prov, err := svc.GetProvider(name)
+		auth, err := svc.Authenticator(name)
 		if err != nil {
 			handleInternalError(err, w)
 			return
 		}
 
-		result, err := prov.Finish(w, r)
+		result, err := auth.Finish(w, r)
 		if err != nil {
 			handleInternalError(err, w)
 			return
@@ -117,7 +117,7 @@ func main() {
 		}
 	})
 
-	r.Get("/profile", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/u/profile", func(w http.ResponseWriter, r *http.Request) {
 		sess, ok, err := sessionCtl.Get(r.Context(), r)
 		if err != nil {
 			handleInternalError(err, w)
@@ -138,7 +138,7 @@ func main() {
 		}
 	})
 
-	r.Get("/logout", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/u/logout", func(w http.ResponseWriter, r *http.Request) {
 		if err := sessionCtl.Del(r.Context(), w, r); err != nil {
 			handleInternalError(err, w)
 			return
@@ -183,17 +183,17 @@ func mustGetenv(key string) string {
 
 var indexAnonTpl = `
 {{range $key,$value:=.Providers}}
-    <p><a href="/auth/{{$value}}?redirect_to=/">Log in with {{index $.ProvidersMap $value}}</a></p>
+    <p><a href="/u/auth/{{$value}}?redirect_to=/">Log in with {{index $.ProvidersMap $value}}</a></p>
 {{end}}
 `
 
 var indexAuthTpl = `
-<p><strong>[Authenticated]</strong> <a href="/logout">Log out</a></p>
-<p>View <a href="/profile">profile</a></p>
+<p><strong>[Authenticated]</strong> <a href="/u/logout">Log out</a></p>
+<p>View <a href="/u/profile">profile</a></p>
 `
 
 var profileTpl = `
-<p><a href="/">Home</a> | <a href="/logout">Log out</a></p>
+<p><a href="/">Home</a> | <a href="/u/logout">Log out</a></p>
 <p>ID: <code>{{.Profile.ID}}</code></p>
 <p>Name: {{.Profile.FirstName}} {{.Profile.LastName}} ({{.Profile.Name}})</p>
 <p>Email: <code>{{.Profile.Email}}</code></p>
