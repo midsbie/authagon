@@ -42,7 +42,7 @@ func (s *OAuth2Service) Register(provider Provider) {
 	s.providers[provider.Name()] = provider
 }
 
-func (s *OAuth2Service) GetProvider(name string) (Provider, error) {
+func (s *OAuth2Service) Provider(name string) (Provider, error) {
 	if name == "" {
 		return nil, ErrNoProvider
 	} else if prov, ok := s.providers[name]; !ok {
@@ -52,8 +52,8 @@ func (s *OAuth2Service) GetProvider(name string) (Provider, error) {
 	}
 }
 
-func (s *OAuth2Service) Authenticator(name string) (Authenticator, error) {
-	provider, err := s.GetProvider(name)
+func (s *OAuth2Service) NewAuthenticator(name string) (Authenticator, error) {
+	provider, err := s.Provider(name)
 	if err != nil {
 		return nil, err
 	}
