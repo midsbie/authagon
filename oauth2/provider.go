@@ -1,7 +1,6 @@
 package oauth2
 
 import (
-	"net/http"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -12,12 +11,6 @@ type Provider interface {
 	Configure(conf *ServiceConfig) oauth2.Config
 	Endpoints() endpoints
 	ExtractProfile(data ProfileMap, _ []byte) (Profile, error)
-}
-
-type AuthSession interface {
-	Set(w http.ResponseWriter, r *http.Request, config AuthConfig) (AuthState, error)
-	Get(r *http.Request) (AuthState, error)
-	Del(w http.ResponseWriter) error
 }
 
 type AuthResult struct {

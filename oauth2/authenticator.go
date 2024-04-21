@@ -9,7 +9,7 @@ import (
 
 type authenticator struct {
 	svcConf  *ServiceConfig
-	session  AuthSession
+	session  SessionManager
 	provider Provider
 }
 
