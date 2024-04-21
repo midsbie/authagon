@@ -80,18 +80,18 @@ func NewProviderConfig(clientID string, clientSecret string,
 	return config
 }
 
-type endpoint struct {
-	oauth2.Endpoint
+type endpoints struct {
+	OAuth2     oauth2.Endpoint
 	ProfileURL string
 }
 
 type StandardProvider struct {
-	name     string
-	endpoint endpoint
-	scopes   []string
-	config   ProviderConfig
-	session  AuthSession
-	mapper   ProfileMapper
+	name      string
+	endpoints endpoints
+	scopes    []string
+	config    ProviderConfig
+	session   AuthSession
+	mapper    ProfileMapper
 }
 
 func (p *StandardProvider) Configure(config ServiceConfig) {
@@ -145,7 +145,7 @@ func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (
 	}
 
 	client := conf.Client(context.Background(), token)
-	preq, err := client.Get(p.endpoint.ProfileURL)
+	preq, err := client.Get(p.endpoints.ProfileURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch profile: %w", err)
 	}
@@ -182,7 +182,7 @@ func (p *StandardProvider) configure() oauth2.Config {
 	return oauth2.Config{
 		ClientID:     p.config.ClientID,
 		ClientSecret: p.config.ClientSecret,
-		Endpoint:     p.endpoint.Endpoint,
+		Endpoint:     p.endpoints.OAuth2,
 		Scopes:       p.scopes,
 		RedirectURL:  p.config.CallbackURL,
 	}

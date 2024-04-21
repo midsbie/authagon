@@ -17,8 +17,8 @@ func NewGoogle(clientID, clientSecret string, options ...StandardProviderOption)
 	p := &googleProvider{
 		StandardProvider{
 			name: "google",
-			endpoint: endpoint{
-				Endpoint:   google.Endpoint,
+			endpoints: endpoints{
+				OAuth2:     google.Endpoint,
 				ProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
 			},
 			scopes: []string{"email", "https://www.googleapis.com/auth/userinfo.profile"},
