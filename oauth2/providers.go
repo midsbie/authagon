@@ -30,14 +30,15 @@ func NewGoogle(clientID, clientSecret string, options ...StandardProviderOption)
 }
 
 func (p *googleProvider) MapProfile(data ParsedProfile, _ []byte) (Profile, error) {
-	id, err := HashID(p.name + "_" + data.String("sub"))
+	canonicalId := data.String("sub")
+	id, err := HashID(p.name + "_" + canonicalId)
 	if err != nil {
 		return Profile{}, err
 	}
 
 	return Profile{
 		ID:          id,
-		CanonicalID: data.String("sub"),
+		CanonicalID: canonicalId,
 		Name:        data.String("name"),
 		FirstName:   data.String("given_name"),
 		LastName:    data.String("family_name"),
