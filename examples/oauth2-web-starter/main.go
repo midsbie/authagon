@@ -25,10 +25,6 @@ type ProviderRegistry struct {
 }
 
 func main() {
-	googleProvider := oauth2.NewGoogle(
-		mustGetenv("AUTH_OAUTH_PROVIDER_GOOGLE_KEY"),
-		mustGetenv("AUTH_OAUTH_PROVIDER_GOOGLE_SECRET"))
-
 	cookieStore := store.NewCookieStore(store.WithSecure(false))
 	jwts, err := oauth2.NewJWTSession(cookieStore, jwtSessionSecret,
 		oauth2.WithAudience(audience))
@@ -42,7 +38,13 @@ func main() {
 		// Customize this to match your settings.
 		CallbackPathTemplate: oauth2.DefaultCallbackPathTemplate,
 	})
-	svc.Register(googleProvider)
+
+	svc.Register(oauth2.NewGoogle(
+		mustGetenv("AUTH_OAUTH_PROVIDER_GOOGLE_KEY"),
+		mustGetenv("AUTH_OAUTH_PROVIDER_GOOGLE_SECRET")))
+	svc.Register(oauth2.NewMicrosoft(
+		mustGetenv("AUTH_OAUTH_PROVIDER_MICROSOFT_KEY"),
+		mustGetenv("AUTH_OAUTH_PROVIDER_MICROSOFT_SECRET")))
 
 	sessionStore := store.NewMemoryStore()
 	sessionCtl := oauth2.NewSessionCtl(cookieStore, sessionStore)
@@ -152,7 +154,8 @@ func main() {
 
 func getProviderRegistry() *ProviderRegistry {
 	m := map[string]string{
-		"google": "Google",
+		"google":    "Google",
+		"microsoft": "Microsoft",
 	}
 
 	var keys []string
