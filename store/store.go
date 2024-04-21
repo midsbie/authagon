@@ -6,32 +6,20 @@ import (
 	"time"
 )
 
-type SessionCreationResult int
-
-const (
-	SessionCreatedExistingAccount SessionCreationResult = iota
-	SessionCreatedNewAccount
-)
-
-type setSessionResponse struct {
-	sid    string
-	result SessionCreationResult
+type sessionResult struct {
+	created bool
 }
 
-// NewSetSessionResponse creates a new session response with the given details.
-func NewSetSessionResponse(sid string, result SessionCreationResult) *setSessionResponse {
-	return &setSessionResponse{
-		sid:    sid,
-		result: result,
+func NewSessionResult(created bool) *sessionResult {
+	return &sessionResult{
+		created: created,
 	}
 }
 
-func (r *setSessionResponse) SID() string                   { return r.sid }
-func (r *setSessionResponse) Result() SessionCreationResult { return r.result }
+func (sr *sessionResult) SessionCreated() bool { return sr.created }
 
-type SetSessionReporter interface {
-	SID() string
-	Result() SessionCreationResult
+type SessionResultReporter interface {
+	SessionCreated() bool
 }
 
 type BrowserStorer interface {
@@ -42,7 +30,7 @@ type BrowserStorer interface {
 
 type SessionStorer interface {
 	Set(ctx context.Context, sid string, value interface{}, duration time.Duration) (
-		SetSessionReporter, error)
+		SessionResultReporter, error)
 	Get(ctx context.Context, sid string) (interface{}, bool, error)
 	Del(ctx context.Context, sid string) error
 }

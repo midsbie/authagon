@@ -16,6 +16,18 @@ const (
 	defaultSessionIDLength = 32
 )
 
+type SessionControlReporter interface {
+	SID() string
+	store.SessionResultReporter
+}
+
+type sessionControlResult struct {
+	store.SessionResultReporter
+	sid string
+}
+
+func (scr *sessionControlResult) SID() string { return scr.sid }
+
 // sessionCtlOption is the type for functional options.
 type sessionCtlOption func(*SessionCtl)
 
@@ -61,7 +73,7 @@ func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionS
 }
 
 func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
-	a AuthResult) (store.SetSessionReporter, error) {
+	a AuthResult) (SessionControlReporter, error) {
 	sid, err := RandomToken(s.sessionIDKeyLen)
 	if err != nil {
 		return nil, errors.New("failed to generate session ID")
@@ -70,7 +82,7 @@ func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
 	if err = s.browserStore.Set(w, s.sessionIDKey, sid, s.sessionDuration); err != nil {
 		return nil, fmt.Errorf("failed to create session cookie: %w", err)
 	} else if resp, err := s.sessionStore.Set(ctx, sid, a, s.sessionDuration); err == nil {
-		return resp, nil
+		return &sessionControlResult{resp, sid}, nil
 	}
 
 	// Calling Set and then Del for the same cookie within the handling of a single request
