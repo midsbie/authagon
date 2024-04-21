@@ -44,5 +44,6 @@ func (p *googleProvider) MapProfile(data ParsedProfile, _ []byte) (Profile, erro
 		LastName:    data.String("family_name"),
 		Email:       data.String("email"),
 		PictureURL:  data.String("picture"),
+		Attributes:  data,
 	}, nil
 }
