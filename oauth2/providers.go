@@ -2,11 +2,14 @@ package oauth2
 
 import (
 	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/microsoft"
 )
 
 var (
 	_ Provider      = (*googleProvider)(nil)
+	_ Provider      = (*microsoftProvider)(nil)
 	_ ProfileMapper = (*googleProvider)(nil)
+	_ ProfileMapper = (*microsoftProvider)(nil)
 )
 
 type googleProvider struct {
@@ -44,6 +47,44 @@ func (p *googleProvider) MapProfile(data ParsedProfile, _ []byte) (Profile, erro
 		LastName:    data.String("family_name"),
 		Email:       data.String("email"),
 		PictureURL:  data.String("picture"),
+		Attributes:  data,
+	}, nil
+}
+
+type microsoftProvider struct {
+	StandardProvider
+}
+
+func NewMicrosoft(clientID, clientSecret string, options ...StandardProviderOption) *microsoftProvider {
+	p := &microsoftProvider{
+		StandardProvider{
+			name: "microsoft",
+			endpoints: endpoints{
+				OAuth2:     microsoft.AzureADEndpoint("common"),
+				ProfileURL: "https://graph.microsoft.com/v1.0/me",
+			},
+			scopes: []string{"User.Read"},
+			config: NewProviderConfig(clientID, clientSecret, options),
+		},
+	}
+	p.mapper = p
+	return p
+}
+
+func (p *microsoftProvider) MapProfile(data ParsedProfile, _ []byte) (Profile, error) {
+	canonicalId := data.String("id")
+	id, err := HashID(p.name + "_" + canonicalId)
+	if err != nil {
+		return Profile{}, err
+	}
+
+	return Profile{
+		ID:          id,
+		CanonicalID: canonicalId,
+		Name:        data.String("displayName"),
+		FirstName:   data.String("givenName"),
+		LastName:    data.String("surname"),
+		Email:       data.String("mail"),
 		Attributes:  data,
 	}, nil
 }
