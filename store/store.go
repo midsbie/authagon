@@ -37,13 +37,11 @@ func NewErroredSetSessionResponse(err error) *setSessionResponse {
 func (r *setSessionResponse) SID() string                   { return r.sid }
 func (r *setSessionResponse) Result() SessionCreationResult { return r.result }
 func (r *setSessionResponse) Error() error                  { return r.err }
-func (r *setSessionResponse) Ok() bool                      { return r.err == nil }
 
 type SetSessionReporter interface {
 	SID() string
 	Result() SessionCreationResult
 	Error() error
-	Ok() bool
 }
 
 type BrowserStorer interface {
