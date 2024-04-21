@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	_ Provider      = (*googleProvider)(nil)
-	_ Provider      = (*microsoftProvider)(nil)
-	_ ProfileMapper = (*googleProvider)(nil)
-	_ ProfileMapper = (*microsoftProvider)(nil)
+	_ Provider         = (*googleProvider)(nil)
+	_ Provider         = (*microsoftProvider)(nil)
+	_ ProfileExtractor = (*googleProvider)(nil)
+	_ ProfileExtractor = (*microsoftProvider)(nil)
 )
 
 type googleProvider struct {
@@ -32,7 +32,7 @@ func NewGoogle(clientID, clientSecret string, options ...StandardProviderOption)
 	return p
 }
 
-func (p *googleProvider) MapProfile(data ParsedProfile, _ []byte) (Profile, error) {
+func (p *googleProvider) ExtractProfile(data ProfileMap, _ []byte) (Profile, error) {
 	canonicalId := data.String("sub")
 	id, err := HashID(p.name + "_" + canonicalId)
 	if err != nil {
@@ -71,7 +71,7 @@ func NewMicrosoft(clientID, clientSecret string, options ...StandardProviderOpti
 	return p
 }
 
-func (p *microsoftProvider) MapProfile(data ParsedProfile, _ []byte) (Profile, error) {
+func (p *microsoftProvider) ExtractProfile(data ProfileMap, _ []byte) (Profile, error) {
 	canonicalId := data.String("id")
 	id, err := HashID(p.name + "_" + canonicalId)
 	if err != nil {

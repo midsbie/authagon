@@ -18,8 +18,8 @@ type Provider interface {
 	Finish(w http.ResponseWriter, r *http.Request) (*AuthResult, error)
 }
 
-type ProfileMapper interface {
-	MapProfile(data ParsedProfile, _ []byte) (Profile, error)
+type ProfileExtractor interface {
+	ExtractProfile(data ProfileMap, _ []byte) (Profile, error)
 }
 
 type AuthSession interface {
@@ -156,19 +156,19 @@ func (p *StandardProvider) Finish(w http.ResponseWriter, r *http.Request) (
 		}
 	}()
 
-	byteProfile, err := io.ReadAll(preq.Body)
+	profileRaw, err := io.ReadAll(preq.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read profile: %w", err)
 	}
 
-	mappedProfile := map[string]interface{}{}
-	if err := json.Unmarshal(byteProfile, &mappedProfile); err != nil {
+	profileMap := map[string]interface{}{}
+	if err := json.Unmarshal(profileRaw, &profileMap); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal profile: %w", err)
 	}
 
-	profile, err := p.mapper.MapProfile(mappedProfile, byteProfile)
+	profile, err := p.mapper.ExtractProfile(profileMap, profileRaw)
 	if err != nil {
-		return nil, fmt.Errorf("failed to map profile: %w", err)
+		return nil, fmt.Errorf("failed to extract profile: %w", err)
 	}
 
 	return &AuthResult{

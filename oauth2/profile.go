@@ -5,10 +5,10 @@ import (
 	"strconv"
 )
 
-type ParsedProfile map[string]interface{}
+type ProfileMap map[string]interface{}
 
 // String returns the value for a given key or an empty string if not found
-func (u ParsedProfile) String(key string) string {
+func (u ProfileMap) String(key string) string {
 	// json.Unmarshal converts json "null" value to go's "nil", in this case return empty string
 	if val, ok := u[key]; ok && val != nil {
 		return fmt.Sprintf("%v", val)
@@ -18,7 +18,7 @@ func (u ParsedProfile) String(key string) string {
 
 // Bool returns the value for a given key or false if not found.
 // It works with values stored as bool or string that can be parsed to bool.
-func (u ParsedProfile) Bool(key string) bool {
+func (u ProfileMap) Bool(key string) bool {
 	if val, ok := u[key]; ok && val != nil {
 		switch v := val.(type) {
 		case bool:
