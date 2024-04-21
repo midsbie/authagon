@@ -61,17 +61,16 @@ func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionS
 }
 
 func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
-	a AuthResult) store.SetSessionReporter {
+	a AuthResult) (store.SetSessionReporter, error) {
 	sid, err := RandomToken(s.sessionIDKeyLen)
 	if err != nil {
-		return store.NewErroredSetSessionResponse(errors.New("failed to generate session ID"))
+		return nil, errors.New("failed to generate session ID")
 	}
 
 	if err = s.browserStore.Set(w, s.sessionIDKey, sid, s.sessionDuration); err != nil {
-		return store.NewErroredSetSessionResponse(
-			fmt.Errorf("failed to create session cookie: %w", err))
-	} else if resp := s.sessionStore.Set(ctx, sid, a, s.sessionDuration); err == nil {
-		return resp
+		return nil, fmt.Errorf("failed to create session cookie: %w", err)
+	} else if resp, err := s.sessionStore.Set(ctx, sid, a, s.sessionDuration); err == nil {
+		return resp, nil
 	}
 
 	// Calling Set and then Del for the same cookie within the handling of a single request
@@ -84,7 +83,7 @@ func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
 	// TODO: handle case where we fail to delete from the browser store, perhaps by logging a
 	// warning?
 	s.browserStore.Del(w, s.sessionIDKey)
-	return store.NewErroredSetSessionResponse(fmt.Errorf("failed to create session: %w", err))
+	return nil, fmt.Errorf("failed to create session: %w", err)
 }
 
 func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (interface{}, bool, error) {

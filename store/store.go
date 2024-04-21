@@ -16,7 +16,6 @@ const (
 type setSessionResponse struct {
 	sid    string
 	result SessionCreationResult
-	err    error
 }
 
 // NewSetSessionResponse creates a new session response with the given details.
@@ -27,21 +26,12 @@ func NewSetSessionResponse(sid string, result SessionCreationResult) *setSession
 	}
 }
 
-// NewErroredSetSessionResponse creates a new errored session response.
-func NewErroredSetSessionResponse(err error) *setSessionResponse {
-	return &setSessionResponse{
-		err: err,
-	}
-}
-
 func (r *setSessionResponse) SID() string                   { return r.sid }
 func (r *setSessionResponse) Result() SessionCreationResult { return r.result }
-func (r *setSessionResponse) Error() error                  { return r.err }
 
 type SetSessionReporter interface {
 	SID() string
 	Result() SessionCreationResult
-	Error() error
 }
 
 type BrowserStorer interface {
@@ -51,8 +41,8 @@ type BrowserStorer interface {
 }
 
 type SessionStorer interface {
-	Set(ctx context.Context, sid string, value interface{},
-		duration time.Duration) SetSessionReporter
+	Set(ctx context.Context, sid string, value interface{}, duration time.Duration) (
+		SetSessionReporter, error)
 	Get(ctx context.Context, sid string) (interface{}, bool, error)
 	Del(ctx context.Context, sid string) error
 }
