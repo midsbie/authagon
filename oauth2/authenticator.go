@@ -13,7 +13,7 @@ type authenticator struct {
 	provider Provider
 }
 
-func (sa *authenticator) Begin(w http.ResponseWriter, r *http.Request, config AuthConfig) error {
+func (sa *authenticator) Start(w http.ResponseWriter, r *http.Request, config AuthConfig) error {
 	auth, err := sa.session.Set(w, r, config)
 	if err != nil {
 		return fmt.Errorf("failed to create authentication session: %w", err)
@@ -27,7 +27,7 @@ func (sa *authenticator) Begin(w http.ResponseWriter, r *http.Request, config Au
 	return nil
 }
 
-func (sa *authenticator) Finish(w http.ResponseWriter, r *http.Request) (
+func (sa *authenticator) Complete(w http.ResponseWriter, r *http.Request) (
 	*AuthResult, error) {
 	receivedState := r.URL.Query().Get("state")
 	if receivedState == "" {

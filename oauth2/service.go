@@ -11,8 +11,8 @@ const (
 )
 
 type Authenticator interface {
-	Begin(w http.ResponseWriter, r *http.Request, config AuthConfig) error
-	Finish(w http.ResponseWriter, r *http.Request) (*AuthResult, error)
+	Start(w http.ResponseWriter, r *http.Request, config AuthConfig) error
+	Complete(w http.ResponseWriter, r *http.Request) (*AuthResult, error)
 }
 
 type ServiceConfig struct {
