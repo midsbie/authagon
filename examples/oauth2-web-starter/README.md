@@ -17,24 +17,44 @@ go mod tidy
 
 ### Configuration
 
-Configure your OAuth2 providers in the `.env` file or directly in your environment. Ensure these
-values are set before starting the application as they are essential for the authentication process.
+Configure your OAuth2 providers directly in your system environment. Ensure these values are set
+before starting the application to prevent it from erroring out.
 
+#### Google OAuth2 Setup
 
-#### Google OAuth2 Setup:
-
-1. Create a client application in Google Cloud Platform.
+1. Create a client application in [Google Cloud Platform](https://console.cloud.google.com/apis/credentials).
 1. Set an authorized redirect URI to http://localhost:3000/u/auth/google/callback in your Google
    Cloud Platform project.
-1. If this URI needs to be different, modify the `CallbackPathTemplate` in the
-   `oauth2.ServiceConfig` configuration to match the authorized redirect URI specified in your
-   Google project.
+   - If this URI needs to be different, modify the `CallbackPathTemplate` in the
+     `oauth2.ServiceConfig` configuration to match the authorized redirect URI specified in your
+     Google project.
+1. In the "Credentials" tab, create OAuth 2.0 Credentials and note the client ID and secret.
+1. Set the following environment variables:
+   ```sh
+   AUTH_OAUTH_PROVIDER_GOOGLE_KEY=your-google-client-id
+   AUTH_OAUTH_PROVIDER_GOOGLE_SECRET=your-google-client-secret
+   ```
 
-Set the following environment vars:
-```
-AUTH_OAUTH_PROVIDER_GOOGLE_KEY=your-google-client-id
-AUTH_OAUTH_PROVIDER_GOOGLE_SECRET=your-google-client-secret
-```
+### Microsoft OAuth2 Setup
+
+1. Create a client application in the [Azure
+   Portal](https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/Overview).
+1. Navigate to "App registrations" and select "New registration".
+   - Set the name for your application.
+   - Choose the supported account types (e.g., single tenant, multi-tenant, and personal Microsoft
+     accounts).
+   - Specify the redirect URI: `http://localhost:3000/u/auth/microsoft/callback`
+1. Once the application is registered, go to the "Authentication" tab:
+   - Ensure the redirect URI is correctly added. If not, add it under the "Web" platform settings.
+1. Go to the "Overview" tab and note your application's client ID.
+1. Go to the "Certificates & secrets" tab:
+   - Create a new client secret and note its value.
+1. Set the following environment variables:
+
+   ```sh
+   AUTH_OAUTH_PROVIDER_MICROSOFT_KEY=<your-microsoft-client-id>
+   AUTH_OAUTH_PROVIDER_MICROSOFT_SECRET=<your-microsoft-client-secret>
+   ```
 
 ### Usage
 
@@ -47,8 +67,8 @@ go run .
 This will start the web server on http://localhost:3000 and will be ready to authenticate users via
 the configured providers.
 
-Visit http://localhost:3000 and click on "Log in with Google" to authenticate using Google. Once
-logged in, you can view the user's profile by navigating to the profile page.
+Visit http://localhost:3000 and click on "Log in with <provider>" to authenticate with your provider
+of choice. Once logged in, you can view the user's profile by navigating to the profile page.
 
 ## Contributing
 
