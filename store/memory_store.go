@@ -18,9 +18,9 @@ func NewMemoryStore() *MemoryStore {
 }
 
 func (s *MemoryStore) Set(ctx context.Context, sid string, value interface{},
-	duration time.Duration) *SetSessionResponse {
+	duration time.Duration) SetSessionReporter {
 	s.sessions[sid] = value
-	return &SetSessionResponse{SID: sid}
+	return NewSetSessionResponse(sid, SessionCreatedExistingAccount)
 }
 
 func (s *MemoryStore) Get(ctx context.Context, sid string) (interface{}, bool, error) {
