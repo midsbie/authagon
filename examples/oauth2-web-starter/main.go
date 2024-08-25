@@ -26,15 +26,15 @@ type ProviderRegistry struct {
 
 func main() {
 	cookieStore := store.NewCookieStore(store.WithSecure(false))
-	jwts, err := oauth2.NewJWTSession(cookieStore, jwtSessionSecret,
+	jwts, err := oauth2.NewJWTSessionManager(cookieStore, jwtSessionSecret,
 		oauth2.WithAudience(audience))
 	if err != nil {
 		panic(fmt.Errorf("failed to create auth session: %w", err))
 	}
 
 	svc := oauth2.NewService(oauth2.ServiceConfig{
-		BaseURL: "http://localhost:" + port,
-		Session: jwts,
+		BaseURL:        "http://localhost:" + port,
+		SessionManager: jwts,
 		// Customize this to match your settings.
 		CallbackPathTemplate: oauth2.DefaultCallbackPathTemplate,
 	})
@@ -74,7 +74,7 @@ func main() {
 
 	r.Get("/u/auth/{provider}", func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "provider")
-		auth, err := svc.Authenticator(name)
+		auth, err := svc.NewAuthenticator(name)
 		if err != nil {
 			handleInternalError(err, w)
 			return
@@ -85,20 +85,20 @@ func main() {
 			RedirectURL: r.URL.Query().Get("redirect_to"),
 		}
 
-		if err := auth.Begin(w, r, config); err != nil {
+		if err := auth.Start(w, r, config); err != nil {
 			handleInternalError(err, w)
 		}
 	})
 
 	r.Get("/u/auth/{provider}/callback", func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "provider")
-		auth, err := svc.Authenticator(name)
+		auth, err := svc.NewAuthenticator(name)
 		if err != nil {
 			handleInternalError(err, w)
 			return
 		}
 
-		result, err := auth.Finish(w, r)
+		result, err := auth.Complete(w, r)
 		if err != nil {
 			handleInternalError(err, w)
 			return
