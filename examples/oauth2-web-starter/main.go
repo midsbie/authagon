@@ -55,8 +55,16 @@ func main() {
 			handleInternalError(err, w)
 			return
 		} else if ok {
-			t, _ := template.New("authenticated").Parse(indexAuthTpl)
-			t.Execute(w, providerRegistry)
+			t, err := template.New("authenticated").Parse(indexAuthTpl)
+			if err != nil {
+				handleInternalError(err, w)
+				return
+			}
+			if err := t.Execute(w, providerRegistry); err != nil {
+				handleInternalError(err, w)
+				return
+			}
+
 			return
 		}
 
@@ -68,6 +76,7 @@ func main() {
 
 		if err := t.Execute(w, providerRegistry); err != nil {
 			handleInternalError(err, w)
+			return
 		}
 	})
 
@@ -86,6 +95,7 @@ func main() {
 
 		if err := auth.Start(w, r, config); err != nil {
 			handleInternalError(err, w)
+			return
 		}
 	})
 
@@ -134,6 +144,7 @@ func main() {
 
 		if err := t.Execute(w, sess); err != nil {
 			handleInternalError(err, w)
+			return
 		}
 	})
 
