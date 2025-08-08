@@ -71,7 +71,7 @@ func (sa *authenticator) Complete(w http.ResponseWriter, r *http.Request) (
 		return nil, fmt.Errorf("failed to read profile: %w", err)
 	}
 
-	profileMap := map[string]interface{}{}
+	profileMap := map[string]any{}
 	if err := json.Unmarshal(profileRaw, &profileMap); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal profile: %w", err)
 	}

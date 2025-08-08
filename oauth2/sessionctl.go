@@ -98,7 +98,7 @@ func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
 	return nil, fmt.Errorf("failed to create session: %w", err)
 }
 
-func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (interface{}, bool, error) {
+func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (any, bool, error) {
 	sid, ok, err := s.GetSessionID(r)
 	if err != nil {
 		return false, false, err

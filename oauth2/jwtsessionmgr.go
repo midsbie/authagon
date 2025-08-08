@@ -176,7 +176,7 @@ func (s *JWTSessionManager) Get(r *http.Request) (AuthState, error) {
 
 	parser := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Alg()}}
 	token, err := parser.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (
-		interface{}, error) {
+		any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v",
 				token.Header["alg"])

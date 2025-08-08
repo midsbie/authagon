@@ -9,21 +9,21 @@ import (
 var _ SessionStorer = (*MemoryStore)(nil)
 
 type MemoryStore struct {
-	sessions map[string]interface{}
+	sessions map[string]any
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		sessions: map[string]interface{}{}}
+		sessions: map[string]any{}}
 }
 
-func (s *MemoryStore) Set(ctx context.Context, sid string, value interface{},
+func (s *MemoryStore) Set(ctx context.Context, sid string, value any,
 	duration time.Duration) (SessionResultReporter, error) {
 	s.sessions[sid] = value
 	return NewSessionResult(false), nil
 }
 
-func (s *MemoryStore) Get(ctx context.Context, sid string) (interface{}, bool, error) {
+func (s *MemoryStore) Get(ctx context.Context, sid string) (any, bool, error) {
 	if a, ok := s.sessions[sid]; ok {
 		return a, true, nil
 	}

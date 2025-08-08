@@ -29,8 +29,8 @@ type BrowserStorer interface {
 }
 
 type SessionStorer interface {
-	Set(ctx context.Context, sid string, value interface{}, duration time.Duration) (
+	Set(ctx context.Context, sid string, value any, duration time.Duration) (
 		SessionResultReporter, error)
-	Get(ctx context.Context, sid string) (interface{}, bool, error)
+	Get(ctx context.Context, sid string) (any, bool, error)
 	Del(ctx context.Context, sid string) error
 }

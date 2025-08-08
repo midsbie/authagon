@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-type ProfileMap map[string]interface{}
+type ProfileMap map[string]any
 
 // String returns the value for a given key or an empty string if not found
 func (u ProfileMap) String(key string) string {
@@ -34,26 +34,26 @@ func (u ProfileMap) Bool(key string) bool {
 }
 
 type Profile struct {
-	ID          string                 `json:"id"`
-	CanonicalID string                 `json:"canonical_id"`
-	Name        string                 `json:"name"`
-	FirstName   string                 `json:"first_name"`
-	LastName    string                 `json:"last_name"`
-	Email       string                 `json:"email,omitempty"`
-	PictureURL  string                 `json:"picture_url"`
-	Attributes  map[string]interface{} `json:"attributes,omitempty"`
+	ID          string         `json:"id"`
+	CanonicalID string         `json:"canonical_id"`
+	Name        string         `json:"name"`
+	FirstName   string         `json:"first_name"`
+	LastName    string         `json:"last_name"`
+	Email       string         `json:"email,omitempty"`
+	PictureURL  string         `json:"picture_url"`
+	Attributes  map[string]any `json:"attributes,omitempty"`
 }
 
 func (u *Profile) SetBoolAttr(key string, val bool) {
 	if u.Attributes == nil {
-		u.Attributes = map[string]interface{}{}
+		u.Attributes = map[string]any{}
 	}
 	u.Attributes[key] = val
 }
 
 func (u *Profile) SetStringAttr(key, val string) {
 	if u.Attributes == nil {
-		u.Attributes = map[string]interface{}{}
+		u.Attributes = map[string]any{}
 	}
 	u.Attributes[key] = val
 }
