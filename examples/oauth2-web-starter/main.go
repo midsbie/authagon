@@ -210,6 +210,15 @@ var indexAuthTpl = `
 <p>View <a href="/u/profile">profile</a></p>
 `
 
+// profileTpl is for DEMONSTRATION PURPOSES ONLY.
+//
+// This template deliberately renders sensitive OAuth2 token details (AccessToken, RefreshToken) in
+// the browser to illustrate what’s available in the AuthResult.  DO NOT expose these values in a
+// production application, doing so would allow anyone with access to the page (or its HTML source)
+// to impersonate the user or refresh their session.
+//
+// In a real application, use these tokens only server-side when making requests to the OAuth2
+// provider’s APIs, and never embed them in HTML or send them to the client.
 var profileTpl = `
 <p><a href="/">Home</a> | <a href="/u/logout">Log out</a></p>
 <p>ID: <code>{{.Profile.ID}}</code></p>
