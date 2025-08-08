@@ -81,21 +81,19 @@ func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
 
 	if err = s.browserStore.Set(w, s.sessionIDKey, sid, s.sessionDuration); err != nil {
 		return nil, fmt.Errorf("failed to create session cookie: %w", err)
-	} else if resp, err := s.sessionStore.Set(ctx, sid, a, s.sessionDuration); err == nil {
-		return &sessionControlResult{resp, sid}, nil
 	}
 
-	// Calling Set and then Del for the same cookie within the handling of a single request
-	// results in the cookie being deleted (not stored) in the client's browser, as the final
-	// state is determined by the last Set-Cookie header processed by the browser.
-	//
-	// In an ideal scenario, we should consider implementing a custom http.ResponseWriter that
-	// buffers headers or offers methods for header manipulation.
-	// ---
-	// TODO: handle case where we fail to delete from the browser store, perhaps by logging a
-	// warning?
-	s.browserStore.Del(w, s.sessionIDKey)
-	return nil, fmt.Errorf("failed to create session: %w", err)
+	resp, err := s.sessionStore.Set(ctx, sid, a, s.sessionDuration)
+	if err != nil {
+		if derr := s.browserStore.Del(w, s.sessionIDKey); derr != nil {
+			err = errors.Join(err,
+				fmt.Errorf("rollback delete cookie failed: %w", derr))
+		}
+
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	return &sessionControlResult{resp, sid}, nil
 }
 
 func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (any, bool, error) {
