@@ -101,9 +101,9 @@ func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
 func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (any, bool, error) {
 	sid, ok, err := s.GetSessionID(r)
 	if err != nil {
-		return false, false, err
+		return nil, false, err
 	} else if !ok {
-		return false, false, nil
+		return nil, false, nil
 	}
 
 	ab, ok, err := s.sessionStore.Get(ctx, sid)
