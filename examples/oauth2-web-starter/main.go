@@ -13,18 +13,17 @@ import (
 	"github.com/midsbie/authagon/store"
 )
 
-const (
-	port             = "3000"
-	jwtSessionSecret = "foobarbaz"
-	audience         = "authagon"
-)
-
 type ProviderRegistry struct {
 	Providers    []string
 	ProvidersMap map[string]string
 }
 
 func main() {
+	port := getenvOrDefault("APP_PORT", "3000")
+	jwtSessionSecret := getenvOrPanic("JWT_SESSION_SECRET")
+	audience := getenvOrDefault("JWT_AUDIENCE", "authagon")
+
+	// In production, remove store.WithSecure(false) so cookies are sent only over HTTPS.
 	cookieStore := store.NewCookieStore(store.WithSecure(false))
 	jwts, err := oauth2.NewJWTSessionManager(cookieStore, jwtSessionSecret,
 		oauth2.WithAudience(audience))
@@ -40,11 +39,11 @@ func main() {
 	})
 
 	svc.Register(oauth2.NewGoogle(
-		mustGetenv("AUTH_OAUTH_PROVIDER_GOOGLE_KEY"),
-		mustGetenv("AUTH_OAUTH_PROVIDER_GOOGLE_SECRET")))
+		getenvOrPanic("AUTH_OAUTH_PROVIDER_GOOGLE_KEY"),
+		getenvOrPanic("AUTH_OAUTH_PROVIDER_GOOGLE_SECRET")))
 	svc.Register(oauth2.NewMicrosoft(
-		mustGetenv("AUTH_OAUTH_PROVIDER_MICROSOFT_KEY"),
-		mustGetenv("AUTH_OAUTH_PROVIDER_MICROSOFT_SECRET")))
+		getenvOrPanic("AUTH_OAUTH_PROVIDER_MICROSOFT_KEY"),
+		getenvOrPanic("AUTH_OAUTH_PROVIDER_MICROSOFT_SECRET")))
 
 	sessionStore := store.NewMemoryStore()
 	sessionCtl := oauth2.NewSessionCtl(cookieStore, sessionStore)
@@ -172,7 +171,15 @@ func handleInternalError(err error, w http.ResponseWriter) {
 	http.Error(w, "Internal server error", http.StatusInternalServerError)
 }
 
-func mustGetenv(key string) string {
+func getenvOrDefault(key, def string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	return v
+}
+
+func getenvOrPanic(key string) string {
 	v := os.Getenv(key)
 	if v == "" {
 		panic(fmt.Sprintf("Env var %s required", key))
