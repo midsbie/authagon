@@ -23,6 +23,10 @@ func HashID(id string) (string, error) {
 }
 
 func RandomToken(len int) (string, error) {
+	if len <= 0 {
+		return "", fmt.Errorf("length must be positive")
+	}
+
 	b := make([]byte, len)
 	if _, err := rand.Read(b); err != nil {
 		return "", fmt.Errorf("failed to generate random bytes: %w", err)
