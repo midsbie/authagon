@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -167,11 +168,13 @@ func (s *JWTSessionManager) Set(w http.ResponseWriter, r *http.Request, config A
 }
 
 func (s *JWTSessionManager) Get(r *http.Request) (AuthState, error) {
-	tokenString, ok, err := s.store.Get(r, s.sessionKey)
+	tokenString, err := s.store.Get(r, s.sessionKey)
 	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return AuthState{}, ErrUnauthenticated
+		}
+
 		return AuthState{}, err
-	} else if !ok {
-		return AuthState{}, ErrUnauthenticated
 	}
 
 	parser := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Alg()}}

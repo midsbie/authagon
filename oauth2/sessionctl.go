@@ -92,9 +92,11 @@ func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (AuthResult, bool
 	}
 
 	ab, err := s.sessionStore.Get(ctx, sid)
-	if errors.Is(err, store.ErrNotFound) {
-		return AuthResult{}, false, nil
-	} else if err != nil {
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return AuthResult{}, false, nil
+		}
+
 		return AuthResult{}, false, fmt.Errorf(
 			"error retrieving session (sid=%s) from store: %s", sid, err.Error())
 	}
@@ -120,11 +122,13 @@ func (s *SessionCtl) Del(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 func (s *SessionCtl) GetSessionID(r *http.Request) (string, bool, error) {
-	sid, ok, err := s.browserStore.Get(r, s.sessionIDKey)
+	sid, err := s.browserStore.Get(r, s.sessionIDKey)
 	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return "", false, nil
+		}
+
 		return "", false, fmt.Errorf("failed to retrieve session ID: %w", err)
-	} else if !ok {
-		return "", false, nil
 	} else if sid == "" {
 		return "", false, fmt.Errorf("invalid session ID")
 	}

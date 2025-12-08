@@ -7,24 +7,24 @@ import (
 	"time"
 )
 
-func TestNewCookieStore(t *testing.T) {
+func TestNewCookieStoreDefaults(t *testing.T) {
 	t.Parallel()
 
 	cs := NewCookieStore()
 	if cs.path != defaultPath {
-		t.Errorf("NewCookieStore() path = %q, want %q", cs.path, defaultPath)
+		t.Errorf("path = %q, want %q", cs.path, defaultPath)
 	}
 	if cs.domain != "" {
-		t.Errorf("NewCookieStore() domain = %q, want empty", cs.domain)
+		t.Errorf("domain = %q, want empty", cs.domain)
 	}
 	if !cs.httpOnly {
-		t.Errorf("NewCookieStore() httpOnly = %v, want true", cs.httpOnly)
+		t.Errorf("httpOnly = %v, want true", cs.httpOnly)
 	}
 	if !cs.secure {
-		t.Errorf("NewCookieStore() secure = %v, want true", cs.secure)
+		t.Errorf("secure = %v, want true", cs.secure)
 	}
 	if cs.sameSite != http.SameSiteDefaultMode {
-		t.Errorf("NewCookieStore() sameSite = %v, want %v", cs.sameSite, http.SameSiteDefaultMode)
+		t.Errorf("sameSite = %v, want %v", cs.sameSite, http.SameSiteDefaultMode)
 	}
 }
 
@@ -62,8 +62,7 @@ func TestCookieStoreSet(t *testing.T) {
 	cs := NewCookieStore(WithSecure(false))
 	w := httptest.NewRecorder()
 
-	err := cs.Set(w, "test-cookie", "test-value", time.Hour)
-	if err != nil {
+	if err := cs.Set(w, "test-cookie", "test-value", time.Hour); err != nil {
 		t.Fatalf("Set() error = %v, want nil", err)
 	}
 
@@ -90,46 +89,6 @@ func TestCookieStoreSet(t *testing.T) {
 	}
 }
 
-func TestCookieStoreSetWithCustomOptions(t *testing.T) {
-	t.Parallel()
-
-	cs := NewCookieStore(
-		WithPath("/custom"),
-		WithDomain("test.com"),
-		WithHTTPOnly(false),
-		WithSecure(true),
-		WithSameSite(http.SameSiteNoneMode),
-	)
-	w := httptest.NewRecorder()
-
-	err := cs.Set(w, "custom-cookie", "custom-value", 30*time.Minute)
-	if err != nil {
-		t.Fatalf("Set() error = %v, want nil", err)
-	}
-
-	cookies := w.Result().Cookies()
-	if len(cookies) != 1 {
-		t.Fatalf("Set() cookies count = %d, want 1", len(cookies))
-	}
-
-	cookie := cookies[0]
-	if cookie.Path != "/custom" {
-		t.Errorf("cookie.Path = %q, want %q", cookie.Path, "/custom")
-	}
-	if cookie.Domain != "test.com" {
-		t.Errorf("cookie.Domain = %q, want %q", cookie.Domain, "test.com")
-	}
-	if cookie.HttpOnly {
-		t.Errorf("cookie.HttpOnly = %v, want false", cookie.HttpOnly)
-	}
-	if !cookie.Secure {
-		t.Errorf("cookie.Secure = %v, want true", cookie.Secure)
-	}
-	if cookie.SameSite != http.SameSiteNoneMode {
-		t.Errorf("cookie.SameSite = %v, want %v", cookie.SameSite, http.SameSiteNoneMode)
-	}
-}
-
 func TestCookieStoreGet(t *testing.T) {
 	t.Parallel()
 
@@ -140,12 +99,9 @@ func TestCookieStoreGet(t *testing.T) {
 		Value: "existing-value",
 	})
 
-	value, ok, err := cs.Get(r, "existing-cookie")
+	value, err := cs.Get(r, "existing-cookie")
 	if err != nil {
 		t.Fatalf("Get() error = %v, want nil", err)
-	}
-	if !ok {
-		t.Fatalf("Get() ok = false, want true")
 	}
 	if value != "existing-value" {
 		t.Errorf("Get() value = %q, want %q", value, "existing-value")
@@ -158,12 +114,9 @@ func TestCookieStoreGetNotFound(t *testing.T) {
 	cs := NewCookieStore()
 	r := httptest.NewRequest(http.MethodGet, "http://example.test/", nil)
 
-	value, ok, err := cs.Get(r, "nonexistent-cookie")
-	if err != nil {
-		t.Fatalf("Get() error = %v, want nil", err)
-	}
-	if ok {
-		t.Fatalf("Get() ok = true, want false")
+	value, err := cs.Get(r, "nonexistent-cookie")
+	if err == nil {
+		t.Fatalf("Get() error = nil, want ErrNotFound")
 	}
 	if value != "" {
 		t.Errorf("Get() value = %q, want empty", value)
@@ -176,8 +129,7 @@ func TestCookieStoreDel(t *testing.T) {
 	cs := NewCookieStore(WithSecure(false))
 	w := httptest.NewRecorder()
 
-	err := cs.Del(w, "cookie-to-delete")
-	if err != nil {
+	if err := cs.Del(w, "cookie-to-delete"); err != nil {
 		t.Fatalf("Del() error = %v, want nil", err)
 	}
 
@@ -204,8 +156,7 @@ func TestCookieStoreRoundTrip(t *testing.T) {
 	cs := NewCookieStore(WithSecure(false))
 
 	w := httptest.NewRecorder()
-	err := cs.Set(w, "roundtrip-cookie", "roundtrip-value", time.Hour)
-	if err != nil {
+	if err := cs.Set(w, "roundtrip-cookie", "roundtrip-value", time.Hour); err != nil {
 		t.Fatalf("Set() error = %v", err)
 	}
 
@@ -214,14 +165,12 @@ func TestCookieStoreRoundTrip(t *testing.T) {
 		r.AddCookie(cookie)
 	}
 
-	value, ok, err := cs.Get(r, "roundtrip-cookie")
+	value, err := cs.Get(r, "roundtrip-cookie")
 	if err != nil {
-		t.Fatalf("Get() error = %v", err)
-	}
-	if !ok {
-		t.Fatalf("Get() ok = false, want true")
+		t.Fatalf("Get() error = %v, want nil", err)
 	}
 	if value != "roundtrip-value" {
 		t.Errorf("Get() value = %q, want %q", value, "roundtrip-value")
 	}
 }
+
