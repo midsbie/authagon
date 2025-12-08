@@ -10,7 +10,9 @@ const (
 	DefaultCallbackPathTemplate = "/u/auth/" + ProviderPlaceholder + "/callback"
 )
 
-type SessionManager interface {
+// StateStore manages short-lived OAuth2/OIDC handshake state (state, nonce, redirect URL).
+// It is not responsible for long-lived application sessions.
+type StateStore interface {
 	Set(w http.ResponseWriter, r *http.Request, config AuthConfig) (AuthState, error)
 	Get(r *http.Request) (AuthState, error)
 	Del(w http.ResponseWriter) error
@@ -24,7 +26,7 @@ type Authenticator interface {
 type ServiceConfig struct {
 	BaseURL              string // Base URL for the service
 	CallbackPathTemplate string // Universal callback path
-	SessionManager       SessionManager
+	StateStore           StateStore
 }
 
 type providers map[string]Provider
@@ -65,5 +67,8 @@ func (s *OAuth2Service) NewAuthenticator(name string) (Authenticator, error) {
 	}
 
 	return &authenticator{
-		svcConf: &s.config, session: s.config.SessionManager, provider: provider}, nil
+		svcConf: &s.config,
+		state:   s.config.StateStore,
+		provider: provider,
+	}, nil
 }

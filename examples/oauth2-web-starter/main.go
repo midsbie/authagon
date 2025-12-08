@@ -27,15 +27,15 @@ func main() {
 
 	// In production, remove store.WithSecure(false) so cookies are sent only over HTTPS.
 	cookieStore := store.NewCookieStore(store.WithSecure(false))
-	jwts, err := oauth2.NewJWTSessionManager(cookieStore, jwtSessionSecret,
+	jwts, err := oauth2.NewJWTStateStore(cookieStore, jwtSessionSecret,
 		oauth2.WithAudience(audience))
 	if err != nil {
 		panic(fmt.Errorf("failed to create auth session: %w", err))
 	}
 
 	svc := oauth2.NewService(oauth2.ServiceConfig{
-		BaseURL:        "http://localhost:" + port,
-		SessionManager: jwts,
+		BaseURL:    "http://localhost:" + port,
+		StateStore: jwts,
 		// Customize this to match your settings.
 		CallbackPathTemplate: oauth2.DefaultCallbackPathTemplate,
 	})

@@ -9,12 +9,12 @@ import (
 
 type authenticator struct {
 	svcConf  *ServiceConfig
-	session  SessionManager
+	state    StateStore
 	provider Provider
 }
 
 func (sa *authenticator) Start(w http.ResponseWriter, r *http.Request, config AuthConfig) error {
-	auth, err := sa.session.Set(w, r, config)
+	auth, err := sa.state.Set(w, r, config)
 	if err != nil {
 		return fmt.Errorf("failed to create authentication session: %w", err)
 	}
@@ -34,12 +34,12 @@ func (sa *authenticator) Complete(w http.ResponseWriter, r *http.Request) (
 		return nil, ErrStateMissing
 	}
 
-	session, err := sa.session.Get(r)
+	session, err := sa.state.Get(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve authentication session: %w", err)
 	} else if session.State != receivedState {
 		return nil, ErrUnexpectedState
-	} else if err = sa.session.Del(w); err != nil {
+	} else if err = sa.state.Del(w); err != nil {
 		// log.Printf("failed to delete auth session: %s", err.Error())
 	}
 

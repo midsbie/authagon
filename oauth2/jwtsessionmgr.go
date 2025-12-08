@@ -34,12 +34,9 @@ type Context struct {
 	RedirectURL string `json:"url"`
 }
 
-// JWTSessionManager encapsulates configuration and state for managing JWT-based sessions in an
-// OAuth2 context. It includes a store for persisting session data, issuer and audience identifiers
-// for token validation, cookie name and durations for HTTP cookie management, and a secret for
-// signing JWTs. The struct is used to create, validate, and terminate sessions that rely on JWT for
-// authentication and state management in web applications.
-type JWTSessionManager struct {
+// JWTStateStore manages short-lived OAuth2 handshake state using a JWT stored in a browser cookie.
+// It is not responsible for long-lived application sessions.
+type JWTStateStore struct {
 	store           store.BrowserStorer
 	secret          string
 	issuer          string
@@ -49,55 +46,53 @@ type JWTSessionManager struct {
 	tokenDuration   time.Duration
 }
 
-// option configures a JWTSession.
-type option func(*JWTSessionManager)
+// StateStoreOption configures a JWTStateStore.
+type StateStoreOption func(*JWTStateStore)
 
-// WithJWTIssuer sets the issuer of the JWTSession.
-func WithJWTIssuer(issuer string) option {
-	return func(c *JWTSessionManager) {
+// WithJWTIssuer sets the issuer claim of the JWTStateStore.
+func WithJWTIssuer(issuer string) StateStoreOption {
+	return func(c *JWTStateStore) {
 		c.issuer = issuer
 	}
 }
 
-// WithAudience sets the audience of the JWTSession.
-func WithAudience(audience string) option {
-	return func(c *JWTSessionManager) {
+// WithAudience sets the audience claim of the JWTStateStore.
+func WithAudience(audience string) StateStoreOption {
+	return func(c *JWTStateStore) {
 		c.audience = audience
 	}
 }
 
-// WithSessionKey sets the cookie name of the JWTSession.
-func WithSessionKey(name string) option {
-	return func(c *JWTSessionManager) {
+// WithSessionKey sets the cookie name used to store the JWT.
+func WithSessionKey(name string) StateStoreOption {
+	return func(c *JWTStateStore) {
 		c.sessionKey = name
 	}
 }
 
-// WithJWTSessionDuration sets the cookie duration of the JWTSession.
-func WithJWTSessionDuration(duration time.Duration) option {
-	return func(c *JWTSessionManager) {
+// WithJWTSessionDuration sets the cookie duration for the handshake JWT.
+func WithJWTSessionDuration(duration time.Duration) StateStoreOption {
+	return func(c *JWTStateStore) {
 		c.sessionDuration = duration
 	}
 }
 
-// WithTokenDuration sets the token duration of the JWTSession.
-func WithTokenDuration(duration time.Duration) option {
-	return func(c *JWTSessionManager) {
+// WithTokenDuration sets the JWT expiry duration for the handshake token.
+func WithTokenDuration(duration time.Duration) StateStoreOption {
+	return func(c *JWTStateStore) {
 		c.tokenDuration = duration
 	}
 }
 
-// NewJWTSessionManager initializes a new JWTSession with default configuration and applies any
+// NewJWTStateStore initializes a new JWTStateStore with default configuration and applies any
 // provided options for customization. This function creates a session manager designed for
 // JWT-based authentication flows, allowing the caller to specify key parameters such as the token
 // issuer, session storage key, session and token expiration durations, and the signing secret. The
-// session manager is capable of creating, validating, and terminating sessions using JWTs for
-// authentication and state management within web applications or other HTTP-based services.
-//
-// The constructor requires a store for persisting session data and a secret for signing the
-// JWTs. Additional configurations can be applied through variadic option functions.
-func NewJWTSessionManager(store store.BrowserStorer, secret string, options ...option) (
-	*JWTSessionManager, error) {
+// handshake state during an OAuth2/OIDC redirect flow. The constructor requires a browser store
+// for persisting the JWT and a secret for signing it. Additional configurations can be applied
+// through variadic StateStoreOption functions.
+func NewJWTStateStore(store store.BrowserStorer, secret string, options ...StateStoreOption) (
+	*JWTStateStore, error) {
 	if store == nil {
 		return nil, fmt.Errorf("store is required")
 	}
@@ -105,7 +100,7 @@ func NewJWTSessionManager(store store.BrowserStorer, secret string, options ...o
 		return nil, fmt.Errorf("secret is required")
 	}
 
-	session := JWTSessionManager{
+	state := JWTStateStore{
 		store:           store,
 		secret:          secret,
 		issuer:          defaultIssuer,
@@ -114,14 +109,14 @@ func NewJWTSessionManager(store store.BrowserStorer, secret string, options ...o
 		tokenDuration:   defaultDuration,
 	}
 
-	for _, option := range options {
-		option(&session)
+	for _, opt := range options {
+		opt(&state)
 	}
 
-	return &session, nil
+	return &state, nil
 }
 
-func (s *JWTSessionManager) Set(w http.ResponseWriter, r *http.Request, config AuthConfig) (
+func (s *JWTStateStore) Set(w http.ResponseWriter, r *http.Request, config AuthConfig) (
 	AuthState, error) {
 	state, err := RandomToken(randomTokenLen)
 	if err != nil {
@@ -167,7 +162,7 @@ func (s *JWTSessionManager) Set(w http.ResponseWriter, r *http.Request, config A
 	return auth, nil
 }
 
-func (s *JWTSessionManager) Get(r *http.Request) (AuthState, error) {
+func (s *JWTStateStore) Get(r *http.Request) (AuthState, error) {
 	tokenString, err := s.store.Get(r, s.sessionKey)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
@@ -208,6 +203,6 @@ func (s *JWTSessionManager) Get(r *http.Request) (AuthState, error) {
 		RedirectURL: claims.Context.RedirectURL}, nil
 }
 
-func (s *JWTSessionManager) Del(w http.ResponseWriter) error {
+func (s *JWTStateStore) Del(w http.ResponseWriter) error {
 	return s.store.Del(w, s.sessionKey)
 }

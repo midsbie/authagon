@@ -13,28 +13,28 @@ import (
 
 // Mock implementations for testing
 
-type mockSessionManager struct {
+type mockStateStore struct {
 	authState AuthState
 	setError  error
 	getError  error
 	delError  error
 }
 
-func (m *mockSessionManager) Set(w http.ResponseWriter, r *http.Request, config AuthConfig) (AuthState, error) {
+func (m *mockStateStore) Set(w http.ResponseWriter, r *http.Request, config AuthConfig) (AuthState, error) {
 	if m.setError != nil {
 		return AuthState{}, m.setError
 	}
 	return m.authState, nil
 }
 
-func (m *mockSessionManager) Get(r *http.Request) (AuthState, error) {
+func (m *mockStateStore) Get(r *http.Request) (AuthState, error) {
 	if m.getError != nil {
 		return AuthState{}, m.getError
 	}
 	return m.authState, nil
 }
 
-func (m *mockSessionManager) Del(w http.ResponseWriter) error {
+func (m *mockStateStore) Del(w http.ResponseWriter) error {
 	return m.delError
 }
 
@@ -115,7 +115,7 @@ func TestAuthenticator_Start(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockSession := &mockSessionManager{
+			mockSession := &mockStateStore{
 				authState: AuthState{
 					State:       "test-state",
 					Nonce:       "test-nonce",
@@ -138,7 +138,7 @@ func TestAuthenticator_Start(t *testing.T) {
 				svcConf: &ServiceConfig{
 					BaseURL: "https://myapp.com",
 				},
-				session:  mockSession,
+				state:    mockSession,
 				provider: mockProv,
 			}
 
@@ -187,7 +187,7 @@ func TestAuthenticator_Complete_Success(t *testing.T) {
 	server := createMockOAuth2Server()
 	defer server.Close()
 
-	mockSession := &mockSessionManager{
+	mockSession := &mockStateStore{
 		authState: AuthState{
 			State:       "test-state",
 			Nonce:       "test-nonce",
@@ -217,10 +217,8 @@ func TestAuthenticator_Complete_Success(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf: &ServiceConfig{
-			BaseURL: "https://myapp.com",
-		},
-		session:  mockSession,
+		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		state:    mockSession,
 		provider: mockProv,
 	}
 
@@ -277,13 +275,11 @@ func TestAuthenticator_Complete_MissingState(t *testing.T) {
 func TestAuthenticator_Complete_SessionRetrievalError(t *testing.T) {
 	t.Parallel()
 
-	mockSession := &mockSessionManager{
+	mockSession := &mockStateStore{
 		getError: fmt.Errorf("session retrieval failed"),
 	}
 
-	auth := &authenticator{
-		session: mockSession,
-	}
+	auth := &authenticator{state: mockSession}
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/?code=test-code&state=test-state", nil)
@@ -303,15 +299,13 @@ func TestAuthenticator_Complete_SessionRetrievalError(t *testing.T) {
 func TestAuthenticator_Complete_StateStateMismatch(t *testing.T) {
 	t.Parallel()
 
-	mockSession := &mockSessionManager{
+	mockSession := &mockStateStore{
 		authState: AuthState{
 			State: "expected-state",
 		},
 	}
 
-	auth := &authenticator{
-		session: mockSession,
-	}
+	auth := &authenticator{state: mockSession}
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/?code=test-code&state=different-state", nil)
@@ -328,15 +322,13 @@ func TestAuthenticator_Complete_StateStateMismatch(t *testing.T) {
 func TestAuthenticator_Complete_MissingCode(t *testing.T) {
 	t.Parallel()
 
-	mockSession := &mockSessionManager{
+	mockSession := &mockStateStore{
 		authState: AuthState{
 			State: "test-state",
 		},
 	}
 
-	auth := &authenticator{
-		session: mockSession,
-	}
+	auth := &authenticator{state: mockSession}
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/?state=test-state", nil)
@@ -356,7 +348,7 @@ func TestAuthenticator_Complete_MissingCode(t *testing.T) {
 func TestAuthenticator_Complete_TokenExchangeFailure(t *testing.T) {
 	t.Parallel()
 
-	mockSession := &mockSessionManager{
+	mockSession := &mockStateStore{
 		authState: AuthState{
 			State: "test-state",
 		},
@@ -375,10 +367,8 @@ func TestAuthenticator_Complete_TokenExchangeFailure(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf: &ServiceConfig{
-			BaseURL: "https://myapp.com",
-		},
-		session:  mockSession,
+		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		state:    mockSession,
 		provider: mockProv,
 	}
 
@@ -415,7 +405,7 @@ func TestAuthenticator_Complete_ProfileFetchFailure(t *testing.T) {
 	}))
 	defer server.Close()
 
-	mockSession := &mockSessionManager{
+	mockSession := &mockStateStore{
 		authState: AuthState{
 			State: "test-state",
 		},
@@ -436,10 +426,8 @@ func TestAuthenticator_Complete_ProfileFetchFailure(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf: &ServiceConfig{
-			BaseURL: "https://myapp.com",
-		},
-		session:  mockSession,
+		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		state:    mockSession,
 		provider: mockProv,
 	}
 
@@ -464,7 +452,7 @@ func TestAuthenticator_Complete_ProfileExtractionFailure(t *testing.T) {
 	server := createMockOAuth2Server()
 	defer server.Close()
 
-	mockSession := &mockSessionManager{
+	mockSession := &mockStateStore{
 		authState: AuthState{
 			State: "test-state",
 		},
@@ -486,10 +474,8 @@ func TestAuthenticator_Complete_ProfileExtractionFailure(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf: &ServiceConfig{
-			BaseURL: "https://myapp.com",
-		},
-		session:  mockSession,
+		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		state:    mockSession,
 		provider: mockProv,
 	}
 
@@ -514,7 +500,7 @@ func TestAuthenticator_Complete_SessionDeletionFailure(t *testing.T) {
 	server := createMockOAuth2Server()
 	defer server.Close()
 
-	mockSession := &mockSessionManager{
+	mockSession := &mockStateStore{
 		authState: AuthState{
 			State:       "test-state",
 			RedirectURL: "/dashboard",
@@ -543,10 +529,8 @@ func TestAuthenticator_Complete_SessionDeletionFailure(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf: &ServiceConfig{
-			BaseURL: "https://myapp.com",
-		},
-		session:  mockSession,
+		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		state:    mockSession,
 		provider: mockProv,
 	}
 
@@ -590,7 +574,7 @@ func TestAuthenticator_Complete_InvalidJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	mockSession := &mockSessionManager{
+	mockSession := &mockStateStore{
 		authState: AuthState{
 			State: "test-state",
 		},
@@ -611,10 +595,8 @@ func TestAuthenticator_Complete_InvalidJSON(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf: &ServiceConfig{
-			BaseURL: "https://myapp.com",
-		},
-		session:  mockSession,
+		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		state:    mockSession,
 		provider: mockProv,
 	}
 
