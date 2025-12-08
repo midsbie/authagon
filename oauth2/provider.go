@@ -28,7 +28,6 @@ type AuthState struct {
 }
 
 type AuthConfig struct {
-	Audience    string
 	RedirectURL string
 }
 

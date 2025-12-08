@@ -145,7 +145,6 @@ func TestAuthenticator_Start(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/login", nil)
 			config := AuthConfig{
-				Audience:    "test-audience",
 				RedirectURL: "/dashboard",
 			}
 
