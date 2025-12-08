@@ -21,8 +21,8 @@ func TestMemoryStoreSetGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Set() error = %v", err)
 	}
-	if res == nil || res.SessionCreated() {
-		t.Fatalf("Set() SessionResultReporter unexpected: %#v", res)
+	if res == nil || !res.SessionCreated() {
+		t.Fatalf("Set() SessionResultReporter unexpected: %#v, want SessionCreated()=true", res)
 	}
 
 	got, ok, err := s.Get(ctx, sid)
@@ -38,6 +38,37 @@ func TestMemoryStoreSetGet(t *testing.T) {
 	}
 }
 
+func TestMemoryStoreExpiration(t *testing.T) {
+	t.Parallel()
+
+	s := NewMemoryStore()
+	ctx := context.Background()
+
+	const sid = "expires"
+	if _, err := s.Set(ctx, sid, "value", 10*time.Millisecond); err != nil {
+		t.Fatalf("Set() error = %v", err)
+	}
+
+	// Immediately available.
+	if v, ok, err := s.Get(ctx, sid); err != nil || !ok || v.(string) != "value" {
+		t.Fatalf("Get() before expiry = (v=%v, ok=%v, err=%v), want value/true/nil", v, ok, err)
+	}
+
+	// Wait for expiry.
+	time.Sleep(20 * time.Millisecond)
+
+	v, ok, err := s.Get(ctx, sid)
+	if err != nil {
+		t.Fatalf("Get() after expiry error = %v, want nil", err)
+	}
+	if ok {
+		t.Fatalf("Get() after expiry ok = true, want false")
+	}
+	if v != nil {
+		t.Fatalf("Get() after expiry value = %#v, want nil", v)
+	}
+}
+
 func TestMemoryStoreGetNotFound(t *testing.T) {
 	t.Parallel()
 
@@ -45,8 +76,8 @@ func TestMemoryStoreGetNotFound(t *testing.T) {
 	ctx := context.Background()
 
 	got, ok, err := s.Get(ctx, "does-not-exist")
-	if err == nil {
-		t.Fatalf("Get() error = nil, want non-nil")
+	if err != nil {
+		t.Fatalf("Get() error = %v, want nil", err)
 	}
 	if ok {
 		t.Fatalf("Get() ok = true, want false")
@@ -63,7 +94,7 @@ func TestMemoryStoreDel(t *testing.T) {
 	ctx := context.Background()
 
 	const sid = "to-delete"
-	if _, err := s.Set(ctx, sid, 42, time.Second); err != nil {
+	if _, err := s.Set(ctx, sid, 42, time.Minute); err != nil {
 		t.Fatalf("Set() error = %v", err)
 	}
 
@@ -72,8 +103,11 @@ func TestMemoryStoreDel(t *testing.T) {
 	}
 
 	_, ok, err := s.Get(ctx, sid)
-	if err == nil || ok {
-		t.Fatalf("Get() after Del() = (ok=%v, err=%v), want ok=false and err!=nil", ok, err)
+	if err != nil {
+		t.Fatalf("Get() after Del() error = %v, want nil", err)
+	}
+	if ok {
+		t.Fatalf("Get() after Del() ok = true, want false")
 	}
 
 	// Deleting non-existent key should be a no-op.
@@ -101,8 +135,7 @@ func TestMemoryStoreConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 			sid := func(i int) string { return "sid-" + strconv.Itoa(w) + "-" + strconv.Itoa(i) }
 			for i := 0; i < readsPerWriter; i++ {
-				_, err := s.Set(ctx, sid(i), i, time.Minute)
-				if err != nil {
+				if _, err := s.Set(ctx, sid(i), i, time.Minute); err != nil {
 					t.Errorf("Set() error (w=%d,i=%d): %v", w, i, err)
 				}
 			}
