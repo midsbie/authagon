@@ -201,7 +201,10 @@ func TestDel_RemovesSessionAndCookie(t *testing.T) {
 	// Attempting to Get again should fail due to missing session in the store.
 	// (Cookie still on the request object, but backing store entry should be gone.)
 	_, ok, err := sc.Get(ctx, r)
-	if err == nil || ok {
-		t.Fatalf("Get() after Del() = (ok=%v, err=%v); want error and ok=false", ok, err)
+	if err != nil {
+		t.Fatalf("Get() after Del() error = %v; want nil", err)
+	}
+	if ok {
+		t.Fatalf("Get() after Del() ok = %v; want false", ok)
 	}
 }
