@@ -5,8 +5,10 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/midsbie/authagon/oauth2"
@@ -89,8 +91,7 @@ func main() {
 		}
 
 		config := oauth2.AuthConfig{
-			Audience:    audience,
-			RedirectURL: r.URL.Query().Get("redirect_to"),
+			RedirectURL: sanitizeRedirectURL(r.URL.Query().Get("redirect_to")),
 		}
 
 		if err := auth.Start(w, r, config); err != nil {
@@ -197,6 +198,38 @@ func getenvOrPanic(key string) string {
 	}
 
 	return v
+}
+
+// sanitizeRedirectURL validates and normalizes a post-login redirect URL.
+// It only allows same-site, relative paths (e.g. "/dashboard" or "/").
+// Any invalid or potentially unsafe value falls back to "/".
+func sanitizeRedirectURL(raw string) string {
+	if raw == "" {
+		return "/"
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "/"
+	}
+
+	// Reject absolute URLs or protocol-relative URLs (which set Host).
+	if u.Scheme != "" || u.Host != "" {
+		return "/"
+	}
+
+	// Only allow paths that start with "/".
+	if u.Path == "" || !strings.HasPrefix(u.Path, "/") {
+		return "/"
+	}
+
+	// Rebuild path + query (ignore fragment).
+	res := u.Path
+	if u.RawQuery != "" {
+		res += "?" + u.RawQuery
+	}
+
+	return res
 }
 
 var indexAnonTpl = `
