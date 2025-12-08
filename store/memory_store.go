@@ -6,45 +6,43 @@ import (
 	"time"
 )
 
-var _ SessionStorer = (*MemoryStore)(nil)
+var _ SessionStorer[any] = (*MemoryStore[any])(nil)
 
-type MemoryStore struct {
+type MemoryStore[T any] struct {
 	mu       sync.RWMutex
-	sessions map[string]sessionEntry
+	sessions map[string]sessionEntry[T]
 }
 
-type sessionEntry struct {
-	value     any
+type sessionEntry[T any] struct {
+	value     T
 	expiresAt time.Time
 }
 
-func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{
-		sessions: make(map[string]sessionEntry),
+func NewMemoryStore[T any]() *MemoryStore[T] {
+	return &MemoryStore[T]{
+		sessions: make(map[string]sessionEntry[T]),
 	}
 }
 
-func (s *MemoryStore) Set(ctx context.Context, sid string, value any,
-	duration time.Duration) (SessionResultReporter, error) {
-	s.mu.RLock()
-	_, exists := s.sessions[sid]
-	s.mu.RUnlock()
-
+func (s *MemoryStore[T]) Set(ctx context.Context, sid string, value T,
+	duration time.Duration) error {
 	s.mu.Lock()
-	s.sessions[sid] = sessionEntry{
+	s.sessions[sid] = sessionEntry[T]{
 		value:     value,
 		expiresAt: time.Now().Add(duration),
 	}
 	s.mu.Unlock()
-	return NewSessionResult(!exists), nil
+	return nil
 }
 
-func (s *MemoryStore) Get(ctx context.Context, sid string) (any, bool, error) {
+func (s *MemoryStore[T]) Get(ctx context.Context, sid string) (T, error) {
+	var zero T
+
 	s.mu.RLock()
 	entry, ok := s.sessions[sid]
 	s.mu.RUnlock()
 	if !ok {
-		return nil, false, nil
+		return zero, ErrNotFound
 	}
 
 	// If the session has expired, delete it and treat as not found.
@@ -52,13 +50,13 @@ func (s *MemoryStore) Get(ctx context.Context, sid string) (any, bool, error) {
 		s.mu.Lock()
 		delete(s.sessions, sid)
 		s.mu.Unlock()
-		return nil, false, nil
+		return zero, ErrNotFound
 	}
 
-	return entry.value, true, nil
+	return entry.value, nil
 }
 
-func (s *MemoryStore) Del(ctx context.Context, sid string) error {
+func (s *MemoryStore[T]) Del(ctx context.Context, sid string) error {
 	s.mu.Lock()
 	delete(s.sessions, sid)
 	s.mu.Unlock()

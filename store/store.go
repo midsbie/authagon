@@ -2,25 +2,12 @@ package store
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 )
 
-type sessionResult struct {
-	created bool
-}
-
-func NewSessionResult(created bool) *sessionResult {
-	return &sessionResult{
-		created: created,
-	}
-}
-
-func (sr *sessionResult) SessionCreated() bool { return sr.created }
-
-type SessionResultReporter interface {
-	SessionCreated() bool
-}
+var ErrNotFound = errors.New("store: not found")
 
 type BrowserStorer interface {
 	Set(w http.ResponseWriter, name, value string, duration time.Duration) error
@@ -28,9 +15,8 @@ type BrowserStorer interface {
 	Del(w http.ResponseWriter, name string) error
 }
 
-type SessionStorer interface {
-	Set(ctx context.Context, sid string, value any, duration time.Duration) (
-		SessionResultReporter, error)
-	Get(ctx context.Context, sid string) (any, bool, error)
+type SessionStorer[T any] interface {
+	Set(ctx context.Context, sid string, value T, duration time.Duration) error
+	Get(ctx context.Context, sid string) (T, error)
 	Del(ctx context.Context, sid string) error
 }

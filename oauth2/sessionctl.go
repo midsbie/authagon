@@ -16,18 +16,6 @@ const (
 	defaultSessionIDLength = 32
 )
 
-type SessionControlReporter interface {
-	SID() string
-	store.SessionResultReporter
-}
-
-type sessionControlResult struct {
-	store.SessionResultReporter
-	sid string
-}
-
-func (scr *sessionControlResult) SID() string { return scr.sid }
-
 // sessionCtlOption is the type for functional options.
 type sessionCtlOption func(*SessionCtl)
 
@@ -54,10 +42,10 @@ type SessionCtl struct {
 	sessionIDKeyLen int
 	sessionDuration time.Duration
 	browserStore    store.BrowserStorer
-	sessionStore    store.SessionStorer
+	sessionStore    store.SessionStorer[AuthResult]
 }
 
-func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionStorer,
+func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionStorer[AuthResult],
 	options ...sessionCtlOption) *SessionCtl {
 	sc := &SessionCtl{
 		sessionIDKey:    DefaultSessionIDKey,
@@ -73,43 +61,42 @@ func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionS
 }
 
 func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
-	a AuthResult) (SessionControlReporter, error) {
+	a AuthResult) (string, error) {
 	sid, err := RandomToken(s.sessionIDKeyLen)
 	if err != nil {
-		return nil, errors.New("failed to generate session ID")
+		return "", errors.New("failed to generate session ID")
 	}
 
 	if err = s.browserStore.Set(w, s.sessionIDKey, sid, s.sessionDuration); err != nil {
-		return nil, fmt.Errorf("failed to create session cookie: %w", err)
+		return "", fmt.Errorf("failed to create session cookie: %w", err)
 	}
 
-	resp, err := s.sessionStore.Set(ctx, sid, a, s.sessionDuration)
-	if err != nil {
+	if err = s.sessionStore.Set(ctx, sid, a, s.sessionDuration); err != nil {
 		if derr := s.browserStore.Del(w, s.sessionIDKey); derr != nil {
 			err = errors.Join(err,
 				fmt.Errorf("rollback delete cookie failed: %w", derr))
 		}
 
-		return nil, fmt.Errorf("failed to create session: %w", err)
+		return "", fmt.Errorf("failed to create session: %w", err)
 	}
 
-	return &sessionControlResult{resp, sid}, nil
+	return sid, nil
 }
 
-func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (any, bool, error) {
+func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (AuthResult, bool, error) {
 	sid, ok, err := s.GetSessionID(r)
 	if err != nil {
-		return nil, false, err
-	} else if !ok {
-		return nil, false, nil
-	}
-
-	ab, ok, err := s.sessionStore.Get(ctx, sid)
-	if err != nil {
-		return AuthResult{}, false, fmt.Errorf(
-			"error retrieving session (sid=%s) from store: %s", sid, err.Error())
+		return AuthResult{}, false, err
 	} else if !ok {
 		return AuthResult{}, false, nil
+	}
+
+	ab, err := s.sessionStore.Get(ctx, sid)
+	if errors.Is(err, store.ErrNotFound) {
+		return AuthResult{}, false, nil
+	} else if err != nil {
+		return AuthResult{}, false, fmt.Errorf(
+			"error retrieving session (sid=%s) from store: %s", sid, err.Error())
 	}
 
 	return ab, true, nil

@@ -47,7 +47,7 @@ func main() {
 		getenvOrPanic("AUTH_OAUTH_PROVIDER_MICROSOFT_KEY"),
 		getenvOrPanic("AUTH_OAUTH_PROVIDER_MICROSOFT_SECRET")))
 
-	sessionStore := store.NewMemoryStore()
+	sessionStore := store.NewMemoryStore[oauth2.AuthResult]()
 	sessionCtl := oauth2.NewSessionCtl(cookieStore, sessionStore)
 	providerRegistry := getProviderRegistry()
 

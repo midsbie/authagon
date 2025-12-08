@@ -20,7 +20,7 @@ func newSessionCtlForTest() *SessionCtl {
 		store.WithSecure(false), // ok for tests
 		store.WithHTTPOnly(true),
 	)
-	mem := store.NewMemoryStore()
+	mem := store.NewMemoryStore[AuthResult]()
 	return NewSessionCtl(cs, mem,
 		WithSessionIDKey("sid"),
 		WithSessionIDKeyLen(16),
@@ -36,13 +36,13 @@ func attachResponseCookiesToRequest(rr *httptest.ResponseRecorder, r *http.Reque
 
 type failingSessionStore struct{}
 
-func (f *failingSessionStore) Set(ctx context.Context, sid string, value interface{},
-	duration time.Duration) (store.SessionResultReporter, error) {
-	return store.NewSessionResult(false), fmt.Errorf("boom: unable to persist session")
+func (f *failingSessionStore) Set(ctx context.Context, sid string, value AuthResult,
+	duration time.Duration) error {
+	return fmt.Errorf("boom: unable to persist session")
 }
 
-func (f *failingSessionStore) Get(ctx context.Context, sid string) (interface{}, bool, error) {
-	return nil, false, fmt.Errorf("not implemented")
+func (f *failingSessionStore) Get(ctx context.Context, sid string) (AuthResult, error) {
+	return AuthResult{}, fmt.Errorf("not implemented")
 }
 
 func (f *failingSessionStore) Del(ctx context.Context, sid string) error { return nil }
@@ -60,11 +60,11 @@ func TestSetAndGet_RoundTrip(t *testing.T) {
 		RedirectURL: "/",
 	}
 	ctx := context.Background()
-	sr, err := sc.Set(ctx, w, ar)
+	sid, err := sc.Set(ctx, w, ar)
 	if err != nil {
 		t.Fatalf("Set() error = %v", err)
 	}
-	if sr == nil || sr.SID() == "" {
+	if sid == "" {
 		t.Fatalf("Set() did not return a valid session ID")
 	}
 
@@ -81,11 +81,6 @@ func TestSetAndGet_RoundTrip(t *testing.T) {
 		t.Fatalf("Get() ok = false, want true")
 	}
 
-	gotAR, ok := got.(AuthResult)
-	if !ok {
-		t.Fatalf("Get() type assertion failed; got %T", got)
-	}
-
 	// Compare fields we expect to round-trip through the store
 	want := AuthResult{
 		Provider:    ar.Provider,
@@ -93,8 +88,8 @@ func TestSetAndGet_RoundTrip(t *testing.T) {
 		Token:       ar.Token,
 		RedirectURL: ar.RedirectURL,
 	}
-	if !reflect.DeepEqual(gotAR, want) {
-		t.Fatalf("Get() mismatch:\n got: %#v\nwant: %#v", gotAR, want)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Get() mismatch:\n got: %#v\nwant: %#v", got, want)
 	}
 }
 
@@ -168,11 +163,11 @@ func TestDel_RemovesSessionAndCookie(t *testing.T) {
 	// First create a session
 	w1 := httptest.NewRecorder()
 	ctx := context.Background()
-	sr, err := sc.Set(ctx, w1, AuthResult{Provider: "google"})
+	sid, err := sc.Set(ctx, w1, AuthResult{Provider: "google"})
 	if err != nil {
 		t.Fatalf("Set() error = %v", err)
 	}
-	if sr == nil || sr.SID() == "" {
+	if sid == "" {
 		t.Fatalf("Set() did not return a valid session ID")
 	}
 
