@@ -37,6 +37,13 @@ func WithSessionDuration(sessionDuration time.Duration) sessionCtlOption {
 	}
 }
 
+// SessionCtl manages long-lived application sessions of AuthResult.
+//
+// It is explicitly separate from OAuth2/OIDC handshake state, which is handled via the StateStore
+// interface. SessionCtl stores a session ID in a BrowserStorer-backed cookie and the corresponding
+// AuthResult in a SessionStorer[AuthResult], allowing HTTP handlers to distinguish unauthenticated
+// callers from internal failures. It is typically constructed with a CookieStore for browser
+// storage and a SessionStorer[AuthResult] such as MemoryStore[AuthResult] for the backing store.
 type SessionCtl struct {
 	sessionIDKey    string
 	sessionIDKeyLen int
@@ -45,6 +52,9 @@ type SessionCtl struct {
 	sessionStore    store.SessionStorer[AuthResult]
 }
 
+// NewSessionCtl constructs a SessionCtl that uses the provided BrowserStorer for the session ID
+// cookie and SessionStorer[AuthResult] for backing session data. Functional options can override
+// the cookie key, session ID length, and session duration.
 func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionStorer[AuthResult],
 	options ...sessionCtlOption) *SessionCtl {
 	sc := &SessionCtl{

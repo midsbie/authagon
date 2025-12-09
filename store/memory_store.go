@@ -8,6 +8,10 @@ import (
 
 var _ SessionStorer[any] = (*MemoryStore[any])(nil)
 
+// MemoryStore is a generic, concurrency-safe in-memory implementation of SessionStorer[T]. It
+// stores session values in a map keyed by session ID and enforces TTL-based expiration on Get. It
+// is suitable for development and small-scale deployments where persistence across process restarts
+// is not required.
 type MemoryStore[T any] struct {
 	mu       sync.RWMutex
 	sessions map[string]sessionEntry[T]
@@ -18,6 +22,7 @@ type sessionEntry[T any] struct {
 	expiresAt time.Time
 }
 
+// NewMemoryStore creates a new MemoryStore[T] ready for use.
 func NewMemoryStore[T any]() *MemoryStore[T] {
 	return &MemoryStore[T]{
 		sessions: make(map[string]sessionEntry[T]),

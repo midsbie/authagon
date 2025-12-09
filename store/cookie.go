@@ -47,7 +47,11 @@ func WithSameSite(sameSite http.SameSite) CookieStoreOption {
 	}
 }
 
-// CookieStore implements the Store interface for cookies.
+// CookieStore is an HTTP cookie-based implementation of BrowserStorer.  It stores string values in
+// browser cookies with configurable Path, Domain, HttpOnly, Secure, and SameSite attributes. By
+// default it uses secure settings appropriate for production (Secure=true, HttpOnly=true,
+// SameSiteDefaultMode); use functional options to relax these for local development when running
+// over HTTP.
 type CookieStore struct {
 	path     string
 	domain   string
@@ -56,7 +60,9 @@ type CookieStore struct {
 	sameSite http.SameSite
 }
 
-// NewCookieStore initializes a new CookieStore with optional configurations.
+// NewCookieStore initializes a new CookieStore with optional configurations. When no options are
+// provided it uses production-safe defaults (Secure=true, HttpOnly=true, SameSiteDefaultMode,
+// path="/").
 func NewCookieStore(options ...CookieStoreOption) *CookieStore {
 	cs := &CookieStore{
 		path:     defaultPath,

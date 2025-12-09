@@ -1,3 +1,7 @@
+// Package oauth2 provides an OAuth2 client, provider abstractions,
+// handshake state management, and an application session controller.
+// It focuses on clear separation between short-lived handshake state
+// and long-lived application sessions.
 package oauth2
 
 import (
@@ -18,11 +22,18 @@ type StateStore interface {
 	Del(w http.ResponseWriter) error
 }
 
+// Authenticator coordinates the OAuth2/OIDC redirect flow for a single
+// provider using a StateStore owned by an OAuth2Service. It does not
+// manage long-lived application sessions.
 type Authenticator interface {
 	Start(w http.ResponseWriter, r *http.Request, config AuthConfig) error
 	Complete(w http.ResponseWriter, r *http.Request) (*AuthResult, error)
 }
 
+// ServiceConfig configures an OAuth2Service. It defines the base URL
+// and callback path template used by providers, the StateStore used to
+// persist handshake state, and an optional RedirectValidator for
+// normalizing and validating post-login redirect URLs.
 type ServiceConfig struct {
 	BaseURL              string            // Base URL for the service
 	CallbackPathTemplate string            // Universal callback path

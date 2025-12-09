@@ -6,6 +6,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// Provider represents an OAuth2/OIDC identity provider. Implementations
+// are responsible for configuring an oauth2.Config, exposing protocol
+// endpoints, and extracting a Profile from the provider-specific user
+// info response.
 type Provider interface {
 	Name() string
 	Configure(conf *ServiceConfig) oauth2.Config
@@ -13,6 +17,10 @@ type Provider interface {
 	ExtractProfile(data ProfileMap, _ []byte) (Profile, error)
 }
 
+// AuthResult is the payload stored in long-lived application sessions.
+// It captures which provider authenticated the user, the extracted
+// Profile, the issued OAuth2 token, and an optional post-login
+// RedirectURL.
 type AuthResult struct {
 	Provider    string
 	Profile     Profile
@@ -20,6 +28,10 @@ type AuthResult struct {
 	RedirectURL string
 }
 
+// AuthState is the short-lived handshake state persisted by a
+// StateStore during the OAuth2/OIDC redirect flow. It carries CSRF
+// protection (State), a Nonce, an optional Audience, and the
+// post-login RedirectURL requested by the caller.
 type AuthState struct {
 	State       string
 	Nonce       string
@@ -27,6 +39,10 @@ type AuthState struct {
 	RedirectURL string
 }
 
+// AuthConfig contains request-scoped configuration for starting a
+// handshake. At present it carries the requested post-login
+// RedirectURL, which is normalized and validated by the service's
+// RedirectValidator before being persisted in AuthState.
 type AuthConfig struct {
 	RedirectURL string
 }

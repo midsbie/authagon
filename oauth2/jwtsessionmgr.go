@@ -34,8 +34,12 @@ type Context struct {
 	RedirectURL string `json:"url"`
 }
 
-// JWTStateStore manages short-lived OAuth2 handshake state using a JWT stored in a browser cookie.
-// It is not responsible for long-lived application sessions.
+// JWTStateStore manages short-lived OAuth2/OIDC handshake state using a signed JWT stored via a
+// store.BrowserStorer. It encodes state, redirect URL, issuer, audience, and expiry into claims,
+// and is not responsible for long-lived application sessions. It is a good fit when you want
+// stateless handshake state with audience validation and cryptographic integrity without
+// introducing additional server-side storage. For simpler setups, a StateStore backed by
+// SessionStorer[AuthState] can be used instead.
 type JWTStateStore struct {
 	store           store.BrowserStorer
 	secret          string
