@@ -24,9 +24,10 @@ type Authenticator interface {
 }
 
 type ServiceConfig struct {
-	BaseURL              string // Base URL for the service
-	CallbackPathTemplate string // Universal callback path
-	StateStore           StateStore
+	BaseURL              string            // Base URL for the service
+	CallbackPathTemplate string            // Universal callback path
+	StateStore           StateStore        // Handshake state storage
+	RedirectValidator    RedirectValidator // Optional redirect validator; defaults to SanitizeRedirectURL
 }
 
 type providers map[string]Provider
@@ -39,6 +40,10 @@ type OAuth2Service struct {
 func NewService(config ServiceConfig) OAuth2Service {
 	if config.CallbackPathTemplate == "" {
 		config.CallbackPathTemplate = DefaultCallbackPathTemplate
+	}
+
+	if config.RedirectValidator == nil {
+		config.RedirectValidator = SanitizeRedirectURL
 	}
 
 	return OAuth2Service{

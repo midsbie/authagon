@@ -14,6 +14,12 @@ type authenticator struct {
 }
 
 func (sa *authenticator) Start(w http.ResponseWriter, r *http.Request, config AuthConfig) error {
+	validator := SanitizeRedirectURL
+	if sa.svcConf != nil && sa.svcConf.RedirectValidator != nil {
+		validator = sa.svcConf.RedirectValidator
+	}
+	config.RedirectURL = validator(config.RedirectURL)
+
 	auth, err := sa.state.Set(w, r, config)
 	if err != nil {
 		return fmt.Errorf("failed to create authentication session: %w", err)
