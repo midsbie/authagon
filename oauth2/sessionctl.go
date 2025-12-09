@@ -25,9 +25,9 @@ func WithSessionIDKey(sessionIDKey string) sessionCtlOption {
 	}
 }
 
-func WithSessionIDKeyLen(len int) sessionCtlOption {
+func WithSessionIDKeyLen(length int) sessionCtlOption {
 	return func(sc *SessionCtl) {
-		sc.sessionIDKeyLen = len
+		sc.sessionIDKeyLen = length
 	}
 }
 

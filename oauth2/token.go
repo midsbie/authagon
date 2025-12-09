@@ -22,12 +22,12 @@ func HashID(id string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func RandomToken(len int) (string, error) {
-	if len <= 0 {
+func RandomToken(length int) (string, error) {
+	if length <= 0 {
 		return "", fmt.Errorf("length must be positive")
 	}
 
-	b := make([]byte, len)
+	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {
 		return "", fmt.Errorf("failed to generate random bytes: %w", err)
 	}
