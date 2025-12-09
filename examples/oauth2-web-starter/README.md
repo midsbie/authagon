@@ -5,6 +5,9 @@ in a Go web application using the chi router and authagon library. This setup si
 incorporating OAuth2 providers like Google into your application, managing sessions, and handling
 user profiles efficiently.
 
+This example is intentionally minimal and is designed for local development and exploration. It is
+**not** production-hardened; see the security notes below before adapting it for real users.
+
 ## Getting Started
 
 ### Installing
@@ -69,6 +72,32 @@ the configured providers.
 
 Visit http://localhost:3000 and click on "Log in with <provider>" to authenticate with your provider
 of choice. Once logged in, you can view the user's profile by navigating to the profile page.
+
+## Security Notes
+
+This starter shows how the pieces fit together; it deliberately makes a few trade-offs that are
+acceptable for local development but should be revisited for production:
+
+- Cookies:
+  - `examples/oauth2-web-starter/main.go` configures `store.NewCookieStore(store.WithSecure(false))`
+    so cookies work over plain HTTP on `localhost`. In production you should:
+    - Serve over HTTPS.
+    - Omit `WithSecure(false)` (or explicitly set `WithSecure(true)`).
+    - Carefully choose `Path`, `Domain`, `SameSite`, and `HttpOnly` according to your app’s needs.
+- Tokens in HTML:
+  - The example `profileTpl` renders OAuth2 tokens in the browser to illustrate what is available in
+    the `AuthResult`. This is **not safe for production**; anyone with access to the page can use
+    those tokens to impersonate the user.
+  - In a real application, keep tokens server-side and use them only when calling the provider’s
+    APIs.
+- Redirect URLs:
+  - The example uses a `sanitizeRedirectURL` helper that only allows relative, same-site paths and
+    falls back to `/` for invalid or external URLs.
+  - When adapting this flow, keep the same constraints to avoid open redirect vulnerabilities.
+- Audience:
+  - `oauth2.JWTStateStore` can enforce an audience (via `WithAudience`) for the handshake JWT. Set
+    this to a value that uniquely identifies your application and keep it consistent across
+    deployments.
 
 ## Contributing
 
