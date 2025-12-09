@@ -182,6 +182,10 @@ func (s *JWTStateStore) Get(r *http.Request) (AuthState, error) {
 		return []byte(s.secret), nil
 	})
 	if err != nil {
+		var vErr *jwt.ValidationError
+		if errors.As(err, &vErr) && vErr.Errors&jwt.ValidationErrorExpired != 0 {
+			return AuthState{}, ErrTokenExpired
+		}
 		return AuthState{}, fmt.Errorf("failed to parse token: %w", err)
 	}
 

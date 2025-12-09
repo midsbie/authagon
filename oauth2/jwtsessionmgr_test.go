@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -147,8 +148,11 @@ func TestJWTStateStore_GetExpiredToken(t *testing.T) {
 	}
 
 	_, err = ss.Get(r2)
-	if err == nil || !strings.Contains(err.Error(), "token expired") {
-		t.Fatalf("Get() error = %v, want token expired error", err)
+	if err == nil {
+		t.Fatalf("Get() error = nil, want ErrTokenExpired")
+	}
+	if !errors.Is(err, ErrTokenExpired) {
+		t.Fatalf("Get() error = %v, want ErrTokenExpired", err)
 	}
 }
 
