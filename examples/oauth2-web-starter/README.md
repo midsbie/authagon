@@ -90,10 +90,6 @@ acceptable for local development but should be revisited for production:
     those tokens to impersonate the user.
   - In a real application, keep tokens server-side and use them only when calling the provider’s
     APIs.
-- Redirect URLs:
-  - The example uses a `sanitizeRedirectURL` helper that only allows relative, same-site paths and
-    falls back to `/` for invalid or external URLs.
-  - When adapting this flow, keep the same constraints to avoid open redirect vulnerabilities.
 - Audience:
   - `oauth2.JWTStateStore` can enforce an audience (via `WithAudience`) for the handshake JWT. Set
     this to a value that uniquely identifies your application and keep it consistent across
