@@ -50,7 +50,7 @@ func (m *mockProvider) Name() string {
 	return m.name
 }
 
-func (m *mockProvider) Configure(conf *ServiceConfig) oauth2.Config {
+func (m *mockProvider) Config(conf *serviceConfig) oauth2.Config {
 	return m.config
 }
 
@@ -135,7 +135,7 @@ func TestAuthenticator_Start(t *testing.T) {
 			}
 
 			auth := &authenticator{
-				svcConf: &ServiceConfig{
+				svcConf: &serviceConfig{
 					BaseURL: "https://myapp.com",
 				},
 				state:    mockSession,
@@ -217,7 +217,7 @@ func TestAuthenticator_Complete_Success(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		svcConf:  &serviceConfig{BaseURL: "https://myapp.com"},
 		state:    mockSession,
 		provider: mockProv,
 	}
@@ -367,7 +367,7 @@ func TestAuthenticator_Complete_TokenExchangeFailure(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		svcConf:  &serviceConfig{BaseURL: "https://myapp.com"},
 		state:    mockSession,
 		provider: mockProv,
 	}
@@ -426,7 +426,7 @@ func TestAuthenticator_Complete_ProfileFetchFailure(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		svcConf:  &serviceConfig{BaseURL: "https://myapp.com"},
 		state:    mockSession,
 		provider: mockProv,
 	}
@@ -474,7 +474,7 @@ func TestAuthenticator_Complete_ProfileExtractionFailure(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		svcConf:  &serviceConfig{BaseURL: "https://myapp.com"},
 		state:    mockSession,
 		provider: mockProv,
 	}
@@ -529,7 +529,7 @@ func TestAuthenticator_Complete_SessionDeletionFailure(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		svcConf:  &serviceConfig{BaseURL: "https://myapp.com"},
 		state:    mockSession,
 		provider: mockProv,
 	}
@@ -595,7 +595,7 @@ func TestAuthenticator_Complete_InvalidJSON(t *testing.T) {
 	}
 
 	auth := &authenticator{
-		svcConf:  &ServiceConfig{BaseURL: "https://myapp.com"},
+		svcConf:  &serviceConfig{BaseURL: "https://myapp.com"},
 		state:    mockSession,
 		provider: mockProv,
 	}

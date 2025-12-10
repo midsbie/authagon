@@ -8,7 +8,7 @@ import (
 )
 
 type authenticator struct {
-	svcConf  *ServiceConfig
+	svcConf  *serviceConfig
 	state    StateStore
 	provider Provider
 }

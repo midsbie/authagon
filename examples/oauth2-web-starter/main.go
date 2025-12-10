@@ -31,12 +31,13 @@ func main() {
 		panic(fmt.Errorf("failed to create auth session: %w", err))
 	}
 
-	svc := oauth2.NewService(oauth2.ServiceConfig{
-		BaseURL:    "http://localhost:" + port,
-		StateStore: jwts,
-		// Customize this to match your settings.
-		CallbackPathTemplate: oauth2.DefaultCallbackPathTemplate,
-	})
+	svc, err := oauth2.NewService(jwts,
+		oauth2.WithBaseURL("http://localhost:"+port),
+		// oauth2.WithCallbackPathTemplate(yourTemplateHere),,
+	)
+	if err != nil {
+		panic(fmt.Errorf("failed to create oauth2 service: %w", err))
+	}
 
 	svc.Register(oauth2.NewGoogle(
 		getenvOrPanic("AUTH_OAUTH_PROVIDER_GOOGLE_KEY"),
@@ -215,9 +216,6 @@ var indexAuthTpl = `
 // the browser to illustrate what’s available in the AuthResult.  DO NOT expose these values in a
 // production application, doing so would allow anyone with access to the page (or its HTML source)
 // to impersonate the user or refresh their session.
-//
-// In a real application, use these tokens only server-side when making requests to the OAuth2
-// provider’s APIs, and never embed them in HTML or send them to the client.
 var profileTpl = `
 <p><a href="/">Home</a> | <a href="/u/logout">Log out</a></p>
 <p>ID: <code>{{.Profile.ID}}</code></p>
