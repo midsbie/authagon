@@ -25,7 +25,7 @@ func (sa *authenticator) Start(w http.ResponseWriter, r *http.Request, config Au
 		return fmt.Errorf("failed to create authentication session: %w", err)
 	}
 
-	conf := sa.provider.Configure(sa.svcConf)
+	conf := sa.provider.Config(sa.svcConf)
 	// We may want to support AccessTypeOffline if we ever want the server to return a refresh
 	// token.  As it stands, a refresh token is not issued.
 	loginURL := conf.AuthCodeURL(auth.State)
@@ -54,14 +54,14 @@ func (sa *authenticator) Complete(w http.ResponseWriter, r *http.Request) (
 		return nil, fmt.Errorf("code query parameter is missing")
 	}
 
-	conf := sa.provider.Configure(sa.svcConf)
+	conf := sa.provider.Config(sa.svcConf)
 	token, err := conf.Exchange(r.Context(), code)
 	if err != nil {
 		return nil, fmt.Errorf("authentication exchance failed: %w", err)
 	}
 
 	client := conf.Client(r.Context(), token)
-	preq, err := client.Get(sa.provider.Endpoints().ProfileURL)
+	preq, err := client.Get(sa.provider.ProfileURL())
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch profile: %w", err)
 	}
@@ -88,7 +88,7 @@ func (sa *authenticator) Complete(w http.ResponseWriter, r *http.Request) (
 	}
 
 	return &AuthResult{
-		Provider:    sa.provider.Name(),
+		Provider:    string(sa.provider.ID()),
 		Profile:     profile,
 		Token:       *token,
 		RedirectURL: session.RedirectURL}, nil

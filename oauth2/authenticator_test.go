@@ -41,21 +41,21 @@ func (m *mockStateStore) Del(w http.ResponseWriter) error {
 type mockProvider struct {
 	name         string
 	config       oauth2.Config
-	endpoints    endpoints
+	profileURL   string
 	profile      Profile
 	extractError error
 }
 
-func (m *mockProvider) Name() string {
-	return m.name
+func (m *mockProvider) ID() ProviderID {
+	return ProviderID(m.name)
 }
 
 func (m *mockProvider) Config(conf *serviceConfig) oauth2.Config {
 	return m.config
 }
 
-func (m *mockProvider) Endpoints() endpoints {
-	return m.endpoints
+func (m *mockProvider) ProfileURL() string {
+	return m.profileURL
 }
 
 func (m *mockProvider) ExtractProfile(data ProfileMap, raw []byte) (Profile, error) {
@@ -210,10 +210,8 @@ func TestAuthenticator_Complete_Success(t *testing.T) {
 				TokenURL: server.URL + "/token",
 			},
 		},
-		endpoints: endpoints{
-			ProfileURL: server.URL + "/profile",
-		},
-		profile: expectedProfile,
+		profileURL: server.URL + "/profile",
+		profile:    expectedProfile,
 	}
 
 	auth := &authenticator{
@@ -420,9 +418,7 @@ func TestAuthenticator_Complete_ProfileFetchFailure(t *testing.T) {
 				TokenURL: server.URL + "/token",
 			},
 		},
-		endpoints: endpoints{
-			ProfileURL: "https://invalid-profile-url.example.com/profile",
-		},
+		profileURL: "https://invalid-profile-url.example.com/profile",
 	}
 
 	auth := &authenticator{
@@ -467,9 +463,7 @@ func TestAuthenticator_Complete_ProfileExtractionFailure(t *testing.T) {
 				TokenURL: server.URL + "/token",
 			},
 		},
-		endpoints: endpoints{
-			ProfileURL: server.URL + "/profile",
-		},
+		profileURL:   server.URL + "/profile",
 		extractError: fmt.Errorf("profile extraction failed"),
 	}
 
@@ -522,10 +516,8 @@ func TestAuthenticator_Complete_SessionDeletionFailure(t *testing.T) {
 				TokenURL: server.URL + "/token",
 			},
 		},
-		endpoints: endpoints{
-			ProfileURL: server.URL + "/profile",
-		},
-		profile: expectedProfile,
+		profileURL: server.URL + "/profile",
+		profile:    expectedProfile,
 	}
 
 	auth := &authenticator{
@@ -589,9 +581,7 @@ func TestAuthenticator_Complete_InvalidJSON(t *testing.T) {
 				TokenURL: server.URL + "/token",
 			},
 		},
-		endpoints: endpoints{
-			ProfileURL: server.URL + "/profile",
-		},
+		profileURL: server.URL + "/profile",
 	}
 
 	auth := &authenticator{
