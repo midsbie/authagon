@@ -1,106 +1,93 @@
 # OAuth2 Web Starter
 
-OAuth2 Web Starter is an exemplary project that demonstrates how to implement OAuth2 authentication
-in a Go web application using the chi router and authagon library. This setup simplifies
-incorporating OAuth2 providers like Google into your application, managing sessions, and handling
-user profiles efficiently.
+OAuth2 Web Starter is a minimal example that wires Authagon into a Go web app using the chi router. It demonstrates:
 
-This example is intentionally minimal and is designed for local development and exploration. It is
-**not** production-hardened; see the security notes below before adapting it for real users.
+- OAuth2/OIDC login with Google and Microsoft.
+- Short-lived handshake state via `JWTStateStore`.
+- Long-lived app sessions via `SessionCtl`.
 
-## Getting Started
+It is intended for local development and exploration, **not** production use.
 
-### Installing
+## Installation
 
 ```bash
-git clone https://github.com/midsbie/authagon/examples/oauth2-web-starter.git
-cd oauth2-web-starter
+git clone https://github.com/midsbie/authagon.git
+cd authagon/examples/oauth2-web-starter
 go mod tidy
 ```
 
-### Configuration
+## Configuration
 
-Configure your OAuth2 providers directly in your system environment. Ensure these values are set
-before starting the application to prevent it from erroring out.
+Set provider credentials via environment variables before running the app.
 
-#### Google OAuth2 Setup
+### Google
 
-1. Create a client application in [Google Cloud Platform](https://console.cloud.google.com/apis/credentials).
-1. Set an authorized redirect URI to http://localhost:3000/u/auth/google/callback in your Google
-   Cloud Platform project.
-   - If this URI needs to be different, modify the `CallbackPathTemplate` in the
-     `oauth2.ServiceConfig` configuration to match the authorized redirect URI specified in your
-     Google project.
-1. In the "Credentials" tab, create OAuth 2.0 Credentials and note the client ID and secret.
-1. Set the following environment variables:
-   ```sh
-   AUTH_OAUTH_PROVIDER_GOOGLE_KEY=your-google-client-id
-   AUTH_OAUTH_PROVIDER_GOOGLE_SECRET=your-google-client-secret
-   ```
+- Create an OAuth client in [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+- Add an authorized redirect URI:
+  - `http://localhost:3000/u/auth/google/callback`
+- Export credentials:
 
-### Microsoft OAuth2 Setup
+  ```sh
+  AUTH_OAUTH_PROVIDER_GOOGLE_KEY=your-google-client-id
+  AUTH_OAUTH_PROVIDER_GOOGLE_SECRET=your-google-client-secret
+  ```
 
-1. Create a client application in the [Azure
-   Portal](https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/Overview).
-1. Navigate to "App registrations" and select "New registration".
-   - Set the name for your application.
-   - Choose the supported account types (e.g., single tenant, multi-tenant, and personal Microsoft
-     accounts).
-   - Specify the redirect URI: `http://localhost:3000/u/auth/microsoft/callback`
-1. Once the application is registered, go to the "Authentication" tab:
-   - Ensure the redirect URI is correctly added. If not, add it under the "Web" platform settings.
-1. Go to the "Overview" tab and note your application's client ID.
-1. Go to the "Certificates & secrets" tab:
-   - Create a new client secret and note its value.
-1. Set the following environment variables:
+- If you need a different redirect path, configure it via
+  `oauth2.WithCallbackPathTemplate(...)` when constructing the `oauth2.OAuth2Service`
+  and keep it in sync with the URI registered in Google.
 
-   ```sh
-   AUTH_OAUTH_PROVIDER_MICROSOFT_KEY=<your-microsoft-client-id>
-   AUTH_OAUTH_PROVIDER_MICROSOFT_SECRET=<your-microsoft-client-secret>
-   ```
+### Microsoft
 
-### Usage
+- Create an app registration in the [Azure Portal](https://portal.azure.com/).
+- Configure a web redirect URI:
+  - `http://localhost:3000/u/auth/microsoft/callback`
+- Export credentials:
 
-To run the application, simply execute:
+  ```sh
+  AUTH_OAUTH_PROVIDER_MICROSOFT_KEY=your-microsoft-client-id
+  AUTH_OAUTH_PROVIDER_MICROSOFT_SECRET=your-microsoft-client-secret
+  ```
+
+## Running
 
 ```bash
 go run .
 ```
 
-This will start the web server on http://localhost:3000 and will be ready to authenticate users via
-the configured providers.
+Then visit:
 
-Visit http://localhost:3000 and click on "Log in with <provider>" to authenticate with your provider
-of choice. Once logged in, you can view the user's profile by navigating to the profile page.
+- `http://localhost:3000` – choose a provider to start login.
+- `http://localhost:3000/u/profile` – view the authenticated profile (after login).
+
+## What the Example Shows
+
+- Browser and handshake state:
+  - `store.NewCookieStore(store.WithSecure(false))` for local HTTP development.
+  - `oauth2.NewJWTStateStore(...)` for short-lived OAuth2/OIDC state.
+- OAuth2 service:
+  - `oauth2.NewService(...)` with `oauth2.NewGoogle` and `oauth2.NewMicrosoft`.
+- App sessions:
+  - `store.NewMemoryStore[oauth2.AuthResult]()` plus `oauth2.NewSessionCtl(...)`.
+- A simple HTML profile view that renders `AuthResult` fields (for demo only).
 
 ## Security Notes
 
-This starter shows how the pieces fit together; it deliberately makes a few trade-offs that are
-acceptable for local development but should be revisited for production:
+This starter trades off security for simplicity in a few places:
 
 - Cookies:
-  - `examples/oauth2-web-starter/main.go` configures `store.NewCookieStore(store.WithSecure(false))`
-    so cookies work over plain HTTP on `localhost`. In production you should:
-    - Serve over HTTPS.
-    - Omit `WithSecure(false)` (or explicitly set `WithSecure(true)`).
-    - Carefully choose `Path`, `Domain`, `SameSite`, and `HttpOnly` according to your app’s needs.
+  - Uses `store.WithSecure(false)` so cookies work over plain HTTP on `localhost`.
+  - In production, serve over HTTPS and use secure settings
+    (`Secure=true`, `HttpOnly=true`, appropriate `SameSite`, `Path`, `Domain`).
 - Tokens in HTML:
-  - The example `profileTpl` renders OAuth2 tokens in the browser to illustrate what is available in
-    the `AuthResult`. This is **not safe for production**; anyone with access to the page can use
-    those tokens to impersonate the user.
-  - In a real application, keep tokens server-side and use them only when calling the provider’s
-    APIs.
+  - `profileTpl` renders access and refresh tokens in the page to show what’s in
+    `AuthResult`. This is **not safe for production**; anyone with page access can
+    reuse those tokens.
+  - In a real app, keep tokens server-side and use them only when calling provider APIs.
 - Audience:
-  - `oauth2.JWTStateStore` can enforce an audience (via `WithAudience`) for the handshake JWT. Set
-    this to a value that uniquely identifies your application and keep it consistent across
-    deployments.
-
-## Contributing
-
-Contributions are what make the open-source community such an amazing place to learn, inspire, and
-create. All contributions are greatly appreciated.
+  - `oauth2.JWTStateStore` can enforce an audience via `WithAudience`. Set this to a
+    value that identifies your app and keep it consistent across deployments.
 
 ## License
 
-Distributed under the MIT License. See LICENSE file in the root of this repository for more
-information.
+Distributed under the MIT License. See the root `LICENSE` file for details.
+
