@@ -29,6 +29,8 @@ func NewMemoryStore[T any]() *MemoryStore[T] {
 	}
 }
 
+// Set stores value under the given session ID with the provided TTL. Any existing entry for sid is
+// overwritten.
 func (s *MemoryStore[T]) Set(ctx context.Context, sid string, value T,
 	duration time.Duration) error {
 	s.mu.Lock()
@@ -40,6 +42,8 @@ func (s *MemoryStore[T]) Set(ctx context.Context, sid string, value T,
 	return nil
 }
 
+// Get returns the value stored for sid. If the entry is missing or has expired it returns the zero
+// value of T and ErrNotFound.
 func (s *MemoryStore[T]) Get(ctx context.Context, sid string) (T, error) {
 	var zero T
 
@@ -61,6 +65,7 @@ func (s *MemoryStore[T]) Get(ctx context.Context, sid string) (T, error) {
 	return entry.value, nil
 }
 
+// Del removes the entry for sid, if present.
 func (s *MemoryStore[T]) Del(ctx context.Context, sid string) error {
 	s.mu.Lock()
 	delete(s.sessions, sid)

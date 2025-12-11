@@ -17,10 +17,9 @@ const (
 	defaultDuration   = 15 * time.Minute
 )
 
-// Claims extends jwt.StandardClaims to include additional information specific to an OAuth
-// handshake process. It encapsulates the standard JWT claims like issuer, subject, and expiration
-// time, along with a Handshake field that contains OAuth-specific state information used during the
-// authentication flow.
+// Claims extends jwt.StandardClaims with OAuth2/OIDC handshake state.
+// It carries the usual JWT fields (issuer, subject, expiry, etc.) along with a Context field that
+// holds the opaque state value and redirect URL used during the authentication flow.
 type Claims struct {
 	jwt.StandardClaims
 	Context *Context `json:"ctx,omitempty"`
@@ -89,12 +88,11 @@ func WithTokenDuration(duration time.Duration) StateStoreOption {
 }
 
 // NewJWTStateStore initializes a new JWTStateStore with default configuration and applies any
-// provided options for customization. This function creates a session manager designed for
-// JWT-based authentication flows, allowing the caller to specify key parameters such as the token
-// issuer, session storage key, session and token expiration durations, and the signing secret. The
-// handshake state during an OAuth2/OIDC redirect flow. The constructor requires a browser store
-// for persisting the JWT and a secret for signing it. Additional configurations can be applied
-// through variadic StateStoreOption functions.
+// provided options for customization. It creates a StateStore implementation for short-lived
+// OAuth2/OIDC handshake state, allowing the caller to specify token issuer, cookie key, session and
+// token lifetimes, and the signing secret. The constructor requires a BrowserStorer for persisting
+// the JWT and a non-empty secret. Additional configuration can be supplied via StateStoreOption
+// values.
 func NewJWTStateStore(store store.BrowserStorer, secret string, options ...StateStoreOption) (
 	*JWTStateStore, error) {
 	if store == nil {
@@ -120,6 +118,9 @@ func NewJWTStateStore(store store.BrowserStorer, secret string, options ...State
 	return &state, nil
 }
 
+// Set creates a new AuthState for the given AuthConfig, signs it into a JWT, stores it in the
+// underlying BrowserStorer, and returns the resulting state.  It generates a random state and nonce
+// and encodes state, redirect URL, issuer, audience, and expiry into the token.
 func (s *JWTStateStore) Set(w http.ResponseWriter, r *http.Request, config AuthConfig) (
 	AuthState, error) {
 	state, err := RandomToken(randomTokenLen)
@@ -166,6 +167,9 @@ func (s *JWTStateStore) Set(w http.ResponseWriter, r *http.Request, config AuthC
 	return auth, nil
 }
 
+// Get reads the handshake JWT from the underlying BrowserStorer, validates it, and returns the
+// decoded AuthState. If the cookie is missing it returns ErrUnauthenticated. If the token is
+// expired it returns ErrTokenExpired.  Other parsing or validation failures are returned as errors.
 func (s *JWTStateStore) Get(r *http.Request) (AuthState, error) {
 	tokenString, err := s.store.Get(r, s.sessionKey)
 	if err != nil {
@@ -211,6 +215,7 @@ func (s *JWTStateStore) Get(r *http.Request) (AuthState, error) {
 		RedirectURL: claims.Context.RedirectURL}, nil
 }
 
+// Del removes the stored handshake JWT from the underlying BrowserStorer.
 func (s *JWTStateStore) Del(w http.ResponseWriter) error {
 	return s.store.Del(w, s.sessionKey)
 }

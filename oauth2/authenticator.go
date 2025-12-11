@@ -26,8 +26,9 @@ func (sa *authenticator) Start(w http.ResponseWriter, r *http.Request, config Au
 	}
 
 	conf := sa.provider.Config(sa.svcConf)
-	// We may want to support AccessTypeOffline if we ever want the server to return a refresh
-	// token.  As it stands, a refresh token is not issued.
+	// We may want to support AccessTypeOffline if we ever want the server to receive a refresh
+	// token. Currently we don’t request offline access, so providers such as Google typically
+	// won’t issue a refresh token.
 	loginURL := conf.AuthCodeURL(auth.State)
 	http.Redirect(w, r, loginURL, http.StatusFound)
 	return nil

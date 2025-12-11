@@ -22,6 +22,10 @@ func HashID(id string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
+// RandomToken returns a hex-encoded cryptographically random string.
+// The length parameter specifies the number of random bytes; the returned string is therefore
+// 2*length characters long. It returns an error if length is non-positive or if the random source
+// fails.
 func RandomToken(length int) (string, error) {
 	if length <= 0 {
 		return "", fmt.Errorf("length must be positive")

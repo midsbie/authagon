@@ -6,13 +6,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// ProviderID identifies a logical OAuth2/OIDC provider (e.g. "google",
-// "microsoft"). It is used as the key for registration and lookup in
-// OAuth2Service.
+// ProviderID identifies a logical OAuth2/OIDC provider (e.g. "google", "microsoft"). It is used as
+// the key for registration and lookup in OAuth2Service.
 type ProviderID string
 
-// ProfileExtractor converts provider-specific user info data into a
-// portable Profile representation.
+// ProfileExtractor converts provider-specific user info data into a portable Profile
+// representation.
 type ProfileExtractor func(ProfileMap, []byte) (Profile, error)
 
 // ProviderEndpoints describes the OAuth2 endpoints and user info URL
@@ -22,10 +21,9 @@ type ProviderEndpoints struct {
 	ProfileURL string
 }
 
-// ProviderSpec captures the protocol-level definition of an OAuth2/OIDC
-// provider: its stable ID, endpoints, default scopes, and how to map
-// user info into a Profile. It has no environment-specific details such
-// as client IDs or callback URLs.
+// ProviderSpec captures the protocol-level definition of an OAuth2/OIDC provider: its stable ID,
+// endpoints, default scopes, and how to map user info into a Profile. It has no
+// environment-specific details such as client IDs or callback URLs.
 type ProviderSpec struct {
 	ID             ProviderID
 	Endpoints      ProviderEndpoints
@@ -33,9 +31,8 @@ type ProviderSpec struct {
 	ExtractProfile ProfileExtractor
 }
 
-// ProviderConfig carries environment-specific configuration for a
-// provider instance: client credentials, optional scope overrides, and
-// an optional explicit callback URL.
+// ProviderConfig carries environment-specific configuration for a provider instance: client
+// credentials, optional scope overrides, and an optional explicit callback URL.
 type ProviderConfig struct {
 	ClientID     string
 	ClientSecret string
@@ -43,8 +40,7 @@ type ProviderConfig struct {
 	CallbackURL  string
 }
 
-// ProviderOption customises a ProviderConfig when constructing a
-// Provider from a ProviderSpec.
+// ProviderOption customises a ProviderConfig when constructing a Provider from a ProviderSpec.
 type ProviderOption func(*ProviderConfig)
 
 // WithScopes overrides the default scopes for a provider instance.
@@ -55,17 +51,17 @@ func WithScopes(scopes ...string) ProviderOption {
 }
 
 // WithCallbackURL overrides the callback URL for a provider instance.
-// When not set, the callback URL is derived from ServiceConfig.
+// When not set, the callback URL is derived from the OAuth2Service’s configuration (BaseURL and
+// CallbackPathTemplate).
 func WithCallbackURL(callbackURL string) ProviderOption {
 	return func(c *ProviderConfig) {
 		c.CallbackURL = callbackURL
 	}
 }
 
-// Provider represents an OAuth2/OIDC identity provider bound to a
-// specific environment (client credentials, optional callback URL). It
-// exposes enough information for OAuth2Service and Authenticator to
-// drive the protocol and extract a Profile.
+// Provider represents an OAuth2/OIDC identity provider bound to a specific environment (client
+// credentials, optional callback URL). It exposes enough information for OAuth2Service and
+// Authenticator to drive the protocol and extract a Profile.
 type Provider interface {
 	ID() ProviderID
 	Config(*serviceConfig) oauth2.Config
@@ -73,16 +69,15 @@ type Provider interface {
 	ExtractProfile(ProfileMap, []byte) (Profile, error)
 }
 
-// standardProvider is the default implementation of Provider built from
-// a ProviderSpec and ProviderConfig.
+// standardProvider is the default implementation of Provider built from a ProviderSpec and
+// ProviderConfig.
 type standardProvider struct {
 	spec   ProviderSpec
 	config ProviderConfig
 }
 
-// NewProvider constructs a Provider from the given spec and config,
-// applying any options. It panics if the resulting configuration is
-// obviously invalid (e.g. missing client ID/secret); applications
+// NewProvider constructs a Provider from the given spec and config, applying any options. It panics
+// if the resulting configuration is obviously invalid (e.g. missing client ID/secret); applications
 // should catch such issues at startup.
 func NewProvider(spec ProviderSpec, cfg ProviderConfig, opts ...ProviderOption) Provider {
 	for _, opt := range opts {
@@ -100,9 +95,8 @@ func NewProvider(spec ProviderSpec, cfg ProviderConfig, opts ...ProviderOption) 
 	}
 }
 
-// NewCustomProvider constructs a Provider from the given components
-// without requiring an explicit ProviderSpec value at the call site. It
-// is a thin convenience wrapper around NewProvider.
+// NewCustomProvider constructs a Provider from the given components without requiring an explicit
+// ProviderSpec value at the call site. It is a thin convenience wrapper around NewProvider.
 func NewCustomProvider(
 	id ProviderID,
 	endpoints ProviderEndpoints,
@@ -154,9 +148,8 @@ func (p *standardProvider) ExtractProfile(data ProfileMap, raw []byte) (Profile,
 }
 
 // AuthResult is the payload stored in long-lived application sessions.
-// It captures which provider authenticated the user, the extracted
-// Profile, the issued OAuth2 token, and an optional post-login
-// RedirectURL.
+// It captures which provider authenticated the user, the extracted Profile, the issued OAuth2
+// token, and an optional post-login RedirectURL.
 type AuthResult struct {
 	Provider    string
 	Profile     Profile
@@ -164,9 +157,8 @@ type AuthResult struct {
 	RedirectURL string
 }
 
-// AuthState is the short-lived handshake state persisted by a
-// StateStore during the OAuth2/OIDC redirect flow. It carries CSRF
-// protection (State), a Nonce, an optional Audience, and the
+// AuthState is the short-lived handshake state persisted by a StateStore during the OAuth2/OIDC
+// redirect flow. It carries CSRF protection (State), a Nonce, an optional Audience, and the
 // post-login RedirectURL requested by the caller.
 type AuthState struct {
 	State       string
@@ -175,9 +167,8 @@ type AuthState struct {
 	RedirectURL string
 }
 
-// AuthConfig contains request-scoped configuration for starting a
-// handshake. At present it carries the requested post-login
-// RedirectURL, which is normalized and validated by the service's
+// AuthConfig contains request-scoped configuration for starting a handshake. At present it carries
+// the requested post-login RedirectURL, which is normalized and validated by the service's
 // RedirectValidator before being persisted in AuthState.
 type AuthConfig struct {
 	RedirectURL string

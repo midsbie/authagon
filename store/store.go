@@ -1,7 +1,7 @@
-// Package store provides generic storage abstractions used by the
-// oauth2 package and example applications. It defines cookie-like
-// browser storage and typed, TTL-aware session storage without any
-// direct coupling to OAuth2 or HTTP handlers.
+// Package store provides generic storage abstractions used by the oauth2 package and example
+// applications. It defines cookie-like browser storage and typed, TTL-aware session storage,
+// without any direct coupling to the oauth2 package itself; browser storage is expressed in terms
+// of net/http’s Request/ResponseWriter types.
 package store
 
 import (
@@ -11,9 +11,8 @@ import (
 	"time"
 )
 
-// ErrNotFound is returned by BrowserStorer and SessionStorer when a
-// requested key does not exist. It represents a “missing” value, not
-// an internal failure.
+// ErrNotFound is returned by BrowserStorer and SessionStorer when a requested key does not
+// exist. It represents a “missing” value, not an internal failure.
 var ErrNotFound = errors.New("store: not found")
 
 type BrowserStorer interface {

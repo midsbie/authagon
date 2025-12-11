@@ -70,6 +70,9 @@ func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionS
 	return sc
 }
 
+// Set creates a new session for the given AuthResult, writes the session ID to the BrowserStorer,
+// and persists the value in the SessionStorer. It returns the new session ID or an error if session
+// creation fails.
 func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
 	a AuthResult) (string, error) {
 	sid, err := RandomToken(s.sessionIDKeyLen)
@@ -93,6 +96,11 @@ func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
 	return sid, nil
 }
 
+// Get retrieves the current AuthResult for the request.
+// It returns:
+// - (AuthResult{}, false, nil) when no valid session is present
+// - (result, true, nil) when authenticated
+// - a non-nil error for internal failures reading the cookie or backing store.
 func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (AuthResult, bool, error) {
 	sid, ok, err := s.GetSessionID(r)
 	if err != nil {
@@ -114,6 +122,9 @@ func (s *SessionCtl) Get(ctx context.Context, r *http.Request) (AuthResult, bool
 	return ab, true, nil
 }
 
+// Del deletes the current session identified by the request. It removes the entry from the
+// SessionStorer and clears the session ID cookie. If no valid session ID is present it returns
+// ErrUnauthenticated.
 func (s *SessionCtl) Del(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	sid, ok, err := s.GetSessionID(r)
 	if err != nil {
@@ -131,6 +142,11 @@ func (s *SessionCtl) Del(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return nil
 }
 
+// GetSessionID reads the session ID from the BrowserStorer-backed cookie.
+// It returns:
+// - (id, true, nil) when a non-empty ID is present
+// - ("", false, nil) when no cookie is set
+// - a non-nil error for other failures.
 func (s *SessionCtl) GetSessionID(r *http.Request) (string, bool, error) {
 	sid, err := s.browserStore.Get(r, s.sessionIDKey)
 	if err != nil {
