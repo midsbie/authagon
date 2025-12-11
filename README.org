@@ -1,0 +1,116 @@
+#+TITLE: Authagon
+
+* Overview
+Authagon is a small Go library for OAuth2/OIDC login flows. It provides:
+
+- Infrastructure for browser and session storage.
+- OAuth2 service orchestration and provider abstraction.
+- A clear split between handshake state and long-lived app sessions.
+
+Targets Go developers building web apps that delegate authentication to providers like Google and Microsoft.
+
+* Installation
+
+#+begin_src sh
+go get github.com/midsbie/authagon
+#+end_src
+
+* Quick Start
+
+Minimal wiring for a web app (error handling omitted for brevity):
+
+#+begin_src go
+import (
+    "net/http"
+
+    "github.com/midsbie/authagon/oauth2"
+    "github.com/midsbie/authagon/store"
+)
+
+func main() {
+    // Browser + handshake state
+    cookieStore := store.NewCookieStore(store.WithSecure(false)) // HTTPS-only in production
+    jwtState, _ := oauth2.NewJWTStateStore(cookieStore, "your-session-secret",
+        oauth2.WithAudience("your-app"))
+
+    // OAuth2 service
+    svc, _ := oauth2.NewService(jwtState,
+        oauth2.WithBaseURL("http://localhost:3000"))
+
+    svc.Register(oauth2.NewGoogle("google-client-id", "google-client-secret"))
+    svc.Register(oauth2.NewMicrosoft("ms-client-id", "ms-client-secret"))
+
+    // App sessions
+    sessionStore := store.NewMemoryStore[oauth2.AuthResult]()
+    sessionCtl := oauth2.NewSessionCtl(cookieStore, sessionStore)
+
+    // Handlers would use svc.NewAuthenticator and sessionCtl.{Set,Get,Del}.
+    _ = sessionCtl
+    http.ListenAndServe(":3000", nil)
+}
+#+end_src
+
+For a full working app, see =examples/oauth2-web-starter=.
+
+* Providers
+
+** Built-in
+- Google:
+  - =oauth2.NewGoogle(clientID, clientSecret, opts...)=
+  - Uses Google OAuth2 endpoints and a default profile scope set.
+
+- Microsoft:
+  - =oauth2.NewMicrosoft(clientID, clientSecret, opts...)=
+  - Defaults to the =common= Azure AD endpoint and =User.Read= scope.
+  - =oauth2.WithTenant("organizations")= to target a specific tenant.
+  - =oauth2.WithMicrosoftScopes(...)= and =oauth2.WithMicrosoftCallbackURL(...)= for overrides.
+
+** Custom Providers
+Use specs and configs directly:
+
+#+begin_src go
+import (
+    xoauth2 "golang.org/x/oauth2"
+
+    "github.com/midsbie/authagon/oauth2"
+)
+
+spec := oauth2.ProviderSpec{
+    ID: "acme",
+    Endpoints: oauth2.ProviderEndpoints{
+        OAuth2: xoauth2.Endpoint{
+            AuthURL:  "https://idp.example/auth",
+            TokenURL: "https://idp.example/token",
+        },
+        ProfileURL: "https://idp.example/me",
+    },
+    DefaultScopes: []string{"openid", "profile"},
+    ExtractProfile: func(m oauth2.ProfileMap, _ []byte) (oauth2.Profile, error) {
+        return oauth2.Profile{ID: m.String("id"), Name: m.String("name")}, nil
+    },
+}
+
+cfg := oauth2.ProviderConfig{ClientID: "id", ClientSecret: "secret"}
+prov := oauth2.NewProvider(spec, cfg)
+#+end_src
+
+Register with =OAuth2Service.Register(prov)=.
+
+* Additional Notes
+
+- Redirect URLs:
+  - All post-login redirects are normalized via a =RedirectValidator= (defaults to =SanitizeRedirectURL=).
+  - Only same-site, relative paths are allowed; invalid values fall back to ="/"=.
+
+- Audience:
+  - =JWTStateStore= can enforce an audience via =WithAudience=; mismatches are rejected.
+  - Expired handshake tokens surface as =ErrTokenExpired=.
+
+- Cookies:
+  - =CookieStore= defaults to production-safe settings:
+    - =Secure=true=, =HttpOnly=true=, =SameSiteDefaultMode=, path ="/"=.
+  - For local HTTP development you can set =store.WithSecure(false)=; do not do this in production.
+
+* License
+
+Authagon is released under the MIT License. See =LICENSE= for details.
