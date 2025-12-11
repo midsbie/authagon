@@ -21,6 +21,7 @@ Minimal wiring for a web app (error handling omitted for brevity):
 
 #+begin_src go
 import (
+    "fmt"
     "net/http"
 
     "github.com/midsbie/authagon/oauth2"
@@ -30,27 +31,48 @@ import (
 func main() {
     // Browser + handshake state
     cookieStore := store.NewCookieStore(store.WithSecure(false)) // HTTPS-only in production
-    jwtState, _ := oauth2.NewJWTStateStore(cookieStore, "your-session-secret",
-        oauth2.WithAudience("your-app"))
+    jwtState, _ := oauth2.NewJWTStateStore(cookieStore, "your-session-secret")
 
-    // OAuth2 service
+    // OAuth2 service (single Google provider for brevity)
     svc, _ := oauth2.NewService(jwtState,
         oauth2.WithBaseURL("http://localhost:3000"))
-
     svc.Register(oauth2.NewGoogle("google-client-id", "google-client-secret"))
-    svc.Register(oauth2.NewMicrosoft("ms-client-id", "ms-client-secret"))
 
-    // App sessions
+    // App sessions (AuthResult)
     sessionStore := store.NewMemoryStore[oauth2.AuthResult]()
     sessionCtl := oauth2.NewSessionCtl(cookieStore, sessionStore)
 
-    // Handlers would use svc.NewAuthenticator and sessionCtl.{Set,Get,Del}.
-    _ = sessionCtl
+    // Start the OAuth2 login flow.
+    http.HandleFunc("/u/auth/google", func(w http.ResponseWriter, r *http.Request) {
+        auth, _ := svc.NewAuthenticator("google")
+        _ = auth.Start(w, r, oauth2.AuthConfig{
+            RedirectURL: "/u/profile",
+        })
+    })
+
+    // Handle the OAuth2 callback, create an app session, and redirect.
+    http.HandleFunc("/u/auth/google/callback", func(w http.ResponseWriter, r *http.Request) {
+        auth, _ := svc.NewAuthenticator("google")
+        result, _ := auth.Complete(w, r)
+        _, _ = sessionCtl.Set(r.Context(), w, *result)
+        http.Redirect(w, r, result.RedirectURL, http.StatusFound)
+    })
+
+    // Example authenticated endpoint.
+    http.HandleFunc("/u/profile", func(w http.ResponseWriter, r *http.Request) {
+        sess, ok, _ := sessionCtl.Get(r.Context(), r)
+        if !ok {
+            http.Error(w, "Not authenticated", http.StatusUnauthorized)
+            return
+        }
+        fmt.Fprintf(w, "Hello, %s!", sess.Profile.Name)
+    })
+
     http.ListenAndServe(":3000", nil)
 }
 #+end_src
 
-For a full working app, see =examples/oauth2-web-starter=.
+For a full working app, see [[examples/oauth2-web-starter][examples/oauth2-web-starter]].
 
 * Providers
 
