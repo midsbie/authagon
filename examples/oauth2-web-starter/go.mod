@@ -1,6 +1,8 @@
 module github.com/midsbie/authagon/examples/oauth2-web-starter
 
-go 1.21
+go 1.24.0
+
+toolchain go1.24.6
 
 replace github.com/midsbie/authagon => ../../
 
@@ -11,6 +13,6 @@ require (
 
 require (
 	cloud.google.com/go v0.67.0 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	golang.org/x/oauth2 v0.22.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
+	golang.org/x/oauth2 v0.34.0 // indirect
 )

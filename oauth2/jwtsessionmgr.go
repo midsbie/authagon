@@ -4,9 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/midsbie/authagon/store"
 )
 
@@ -17,11 +18,11 @@ const (
 	defaultDuration   = 15 * time.Minute
 )
 
-// Claims extends jwt.StandardClaims with OAuth2/OIDC handshake state.
+// Claims extends jwt.RegisteredClaims with OAuth2/OIDC handshake state.
 // It carries the usual JWT fields (issuer, subject, expiry, etc.) along with a Context field that
 // holds the opaque state value and redirect URL used during the authentication flow.
 type Claims struct {
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 	Context *Context `json:"ctx,omitempty"`
 }
 
@@ -141,21 +142,25 @@ func (s *JWTStateStore) Set(w http.ResponseWriter, r *http.Request, config AuthC
 	}
 
 	now := time.Now()
+	var aud jwt.ClaimStrings
+	if auth.Audience != "" {
+		aud = jwt.ClaimStrings{auth.Audience}
+	}
 	claims := Claims{
 		Context: &Context{
 			State:       auth.State,
 			RedirectURL: auth.RedirectURL,
 		},
-		StandardClaims: jwt.StandardClaims{
-			Id:        auth.Nonce,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        auth.Nonce,
 			Issuer:    s.issuer,
-			Audience:  auth.Audience,
-			ExpiresAt: now.Add(s.tokenDuration).Unix(),
-			NotBefore: now.Unix(),
+			Audience:  aud,
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.tokenDuration)),
+			NotBefore: jwt.NewNumericDate(now),
+			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
 
-	claims.IssuedAt = time.Now().Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	if tokenString, err := token.SignedString([]byte(s.secret)); err != nil {
@@ -180,18 +185,16 @@ func (s *JWTStateStore) Get(r *http.Request) (AuthState, error) {
 		return AuthState{}, err
 	}
 
-	parser := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Alg()}}
-	token, err := parser.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (
 		any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v",
 				token.Header["alg"])
 		}
 		return []byte(s.secret), nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	if err != nil {
-		var vErr *jwt.ValidationError
-		if errors.As(err, &vErr) && vErr.Errors&jwt.ValidationErrorExpired != 0 {
+		if errors.Is(err, jwt.ErrTokenExpired) {
 			return AuthState{}, ErrTokenExpired
 		}
 		return AuthState{}, fmt.Errorf("failed to parse token: %w", err)
@@ -202,16 +205,19 @@ func (s *JWTStateStore) Get(r *http.Request) (AuthState, error) {
 		return AuthState{}, fmt.Errorf("invalid token")
 	} else if claims.Context == nil {
 		return AuthState{}, fmt.Errorf("context not found")
-	} else if s.audience != "" && claims.Audience != s.audience {
-		return AuthState{}, fmt.Errorf("audience not allowed: %s", claims.Audience)
-	} else if !claims.VerifyExpiresAt(time.Now().Unix(), true) {
-		return AuthState{}, fmt.Errorf("token expired")
+	} else if s.audience != "" && !slices.Contains(claims.Audience, s.audience) {
+		return AuthState{}, fmt.Errorf("audience not allowed: %v", claims.Audience)
+	}
+
+	var audience string
+	if len(claims.Audience) > 0 {
+		audience = claims.Audience[0]
 	}
 
 	return AuthState{
 		State:       claims.Context.State,
-		Nonce:       claims.Id,
-		Audience:    claims.Audience,
+		Nonce:       claims.ID,
+		Audience:    audience,
 		RedirectURL: claims.Context.RedirectURL}, nil
 }
 
