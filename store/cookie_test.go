@@ -173,4 +173,3 @@ func TestCookieStoreRoundTrip(t *testing.T) {
 		t.Errorf("Get() value = %q, want %q", value, "roundtrip-value")
 	}
 }
-

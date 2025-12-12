@@ -43,4 +43,3 @@ func SanitizeRedirectURL(raw string) string {
 
 	return res
 }
-

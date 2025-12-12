@@ -32,4 +32,3 @@ func TestSanitizeRedirectURL(t *testing.T) {
 		})
 	}
 }
-
