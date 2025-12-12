@@ -72,7 +72,9 @@ func main() {
 }
 #+end_src
 
-For a full working app, see [[examples/oauth2-web-starter][examples/oauth2-web-starter]].
+For a full working app that uses =SessionCtl=, see [[examples/oauth2-web-starter][examples/oauth2-web-starter]].
+For an example where the application manages its own sessions without =SessionCtl=, see
+[[examples/oauth2-core-flow][examples/oauth2-core-flow]].
 
 * Providers
 
@@ -132,6 +134,12 @@ Register with =OAuth2Service.Register(prov)=.
   - =CookieStore= defaults to production-safe settings:
     - =Secure=true=, =HttpOnly=true=, =SameSiteDefaultMode=, path ="/"=.
   - For local HTTP development you can set =store.WithSecure(false)=; do not do this in production.
+
+- Sessions:
+  - =SessionCtl= is an optional, batteries-included helper that stores =AuthResult= in a
+    =SessionStorer[AuthResult]= behind a browser cookie.
+  - Applications with existing session infrastructure can ignore =SessionCtl= and manage app
+    sessions directly; see [[examples/oauth2-core-flow][examples/oauth2-core-flow]] for a minimal example.
 
 * License
 
