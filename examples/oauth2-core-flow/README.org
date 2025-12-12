@@ -1,0 +1,105 @@
+#+TITLE: OAuth2 Core Flow (No SessionCtl)
+
+* Overview
+This example shows how to use Authagon's OAuth2 handshake (state + providers) without =SessionCtl=.
+The application manages its own app sessions on top of the =AuthResult= returned by the OAuth2 flow.
+
+It is intended for local development and exploration, *not* production use.
+
+* What It Demonstrates
+
+- Browser and handshake state via:
+  - =store.CookieStore=
+  - =oauth2.JWTStateStore=
+- OAuth2 service:
+  - =oauth2.NewService= with =oauth2.NewGoogle=
+  - per-request authenticators via =svc.NewAuthenticator=
+- Application-managed sessions:
+  - =AppSession= type wrapping =oauth2.Profile=
+  - =InMemorySessionStore= for simple app session persistence
+  - custom helpers to set/get app sessions from a cookie
+
+Authagon handles the OAuth2/OIDC protocol and handshake state; the example owns app sessions entirely.
+
+* Installation
+
+#+begin_src sh
+git clone https://github.com/midsbie/authagon.git
+cd authagon/examples/oauth2-core-flow
+go mod tidy
+#+end_src
+
+* Configuration
+
+Set provider credentials and handshake settings via environment variables before running the app.
+
+** Google
+
+- Create an OAuth client in [[https://console.cloud.google.com/apis/credentials][Google Cloud Console]].
+- Add an authorized redirect URI:
+  - =http://localhost:3000/u/auth/google/callback=
+- Export credentials:
+
+#+begin_src sh
+AUTH_OAUTH_PROVIDER_GOOGLE_KEY=your-google-client-id
+AUTH_OAUTH_PROVIDER_GOOGLE_SECRET=your-google-client-secret
+#+end_src
+
+** Handshake JWT
+
+- Set a secret for signing the short-lived handshake JWT:
+
+#+begin_src sh
+JWT_SESSION_SECRET=your-random-session-secret
+#+end_src
+
+- Optionally set an audience (defaults to =authagon-core-example=):
+
+#+begin_src sh
+JWT_AUDIENCE=your-app-audience
+#+end_src
+
+* Running
+
+#+begin_src sh
+go run .
+#+end_src
+
+Then visit:
+
+- =http://localhost:3000= – home page with "Log in with Google".
+- =http://localhost:3000/u/profile= – authenticated profile view (after login).
+
+* Flow Summary
+
+- =/u/auth/google=
+  - Uses =svc.NewAuthenticator("google")= and =auth.Start(...)=
+  - Begins the OAuth2 login and redirects to Google.
+- =/u/auth/google/callback=
+  - Uses =auth.Complete(...)= to finish the handshake and obtain an =AuthResult=.
+  - Maps =AuthResult.Profile= into an =AppSession= and creates an app session cookie.
+- =/u/profile=
+  - Reads the app session cookie and looks up the =AppSession= from =InMemorySessionStore=.
+  - Renders a simple HTML view of the profile. No =SessionCtl= is involved.
+- =/u/logout=
+  - Clears the app session cookie and in-memory session entry.
+
+* Security Notes
+
+This starter trades off security for simplicity:
+
+- Cookies:
+  - Uses =store.WithSecure(false)= so cookies work over plain HTTP on =localhost=.
+  - In production, serve over HTTPS and use secure settings
+    (=Secure=true=, =HttpOnly=true=, appropriate =SameSite=, =Path=, =Domain=).
+- Tokens and sessions:
+  - Handshake state (short-lived) is kept in a signed JWT via =JWTStateStore=.
+  - App sessions in this example are stored only in memory; in a real application you would replace
+    =InMemorySessionStore= with a persistent store (e.g. Postgres + Redis) and keep session IDs
+    unguessable.
+
+* See Also
+
+- For a fuller example that uses =SessionCtl= to manage =AuthResult= sessions, see
+  [[../oauth2-web-starter][examples/oauth2-web-starter]].
+
