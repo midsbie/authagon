@@ -123,6 +123,8 @@ func main() {
 
 		if result.RedirectURL != "" {
 			http.Redirect(w, r, result.RedirectURL, http.StatusTemporaryRedirect)
+		} else {
+			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		}
 	})
 
