@@ -66,6 +66,10 @@ func (sa *authenticator) Complete(w http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch profile: %w", err)
 	}
+	if preq.StatusCode < 200 || preq.StatusCode >= 300 {
+		preq.Body.Close()
+		return nil, fmt.Errorf("profile request failed with status %d", preq.StatusCode)
+	}
 
 	defer func() {
 		if e := preq.Body.Close(); e != nil {
