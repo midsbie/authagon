@@ -58,7 +58,7 @@ func (sa *authenticator) Complete(w http.ResponseWriter, r *http.Request) (
 	conf := sa.provider.Config(sa.svcConf)
 	token, err := conf.Exchange(r.Context(), code)
 	if err != nil {
-		return nil, fmt.Errorf("authentication exchance failed: %w", err)
+		return nil, fmt.Errorf("authentication exchange failed: %w", err)
 	}
 
 	client := conf.Client(r.Context(), token)

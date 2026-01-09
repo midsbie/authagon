@@ -377,7 +377,7 @@ func TestAuthenticator_Complete_TokenExchangeFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("Complete() error = nil, want error")
 	}
-	if !strings.Contains(err.Error(), "authentication exchance failed") {
+	if !strings.Contains(err.Error(), "authentication exchange failed") {
 		t.Errorf("Complete() error = %q, want error about exchange failure", err.Error())
 	}
 	if result != nil {
