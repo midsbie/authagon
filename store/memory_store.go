@@ -57,7 +57,10 @@ func (s *MemoryStore[T]) Get(ctx context.Context, sid string) (T, error) {
 	// If the session has expired, delete it and treat as not found.
 	if time.Now().After(entry.expiresAt) {
 		s.mu.Lock()
-		delete(s.sessions, sid)
+		// Re-check after acquiring write lock to avoid TOCTOU race.
+		if entry, ok = s.sessions[sid]; ok && time.Now().After(entry.expiresAt) {
+			delete(s.sessions, sid)
+		}
 		s.mu.Unlock()
 		return zero, ErrNotFound
 	}
