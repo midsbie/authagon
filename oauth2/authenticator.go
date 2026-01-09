@@ -46,8 +46,8 @@ func (sa *authenticator) Complete(w http.ResponseWriter, r *http.Request) (
 		return nil, fmt.Errorf("failed to retrieve authentication session: %w", err)
 	} else if session.State != receivedState {
 		return nil, ErrUnexpectedState
-	} else if err = sa.state.Del(w); err != nil {
-		// log.Printf("failed to delete auth session: %s", err.Error())
+	} else if err = sa.state.Del(w); err != nil { //nolint:errcheck
+		// TODO: log this error
 	}
 
 	code := r.URL.Query().Get("code")
@@ -71,11 +71,7 @@ func (sa *authenticator) Complete(w http.ResponseWriter, r *http.Request) (
 		return nil, fmt.Errorf("profile request failed with status %d", preq.StatusCode)
 	}
 
-	defer func() {
-		if e := preq.Body.Close(); e != nil {
-			// log.Printf("failed to close response body: %s", e.Error())
-		}
-	}()
+	defer preq.Body.Close()
 
 	profileRaw, err := io.ReadAll(preq.Body)
 	if err != nil {
