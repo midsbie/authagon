@@ -202,8 +202,8 @@ func getenvOrPanic(key string) string {
 }
 
 var indexAnonTpl = `
-{{range $key,$value:=.Providers}}
-    <p><a href="/u/auth/{{$value}}?redirect_to=/">Log in with {{index $.ProvidersMap $value}}</a></p>
+{{range $idx, $provider := .Providers}}
+    <p><a href="/u/auth/{{$provider}}?redirect_to=/">Log in with {{index $.ProvidersMap $provider}}</a></p>
 {{end}}
 `
 
