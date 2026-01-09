@@ -16,22 +16,22 @@ const (
 	defaultSessionIDLength = 32
 )
 
-// sessionCtlOption is the type for functional options.
-type sessionCtlOption func(*SessionCtl)
+// SessionCtlOption is the type for functional options.
+type SessionCtlOption func(*SessionCtl)
 
-func WithSessionIDKey(sessionIDKey string) sessionCtlOption {
+func WithSessionIDKey(sessionIDKey string) SessionCtlOption {
 	return func(sc *SessionCtl) {
 		sc.sessionIDKey = sessionIDKey
 	}
 }
 
-func WithSessionIDKeyLen(length int) sessionCtlOption {
+func WithSessionIDKeyLen(length int) SessionCtlOption {
 	return func(sc *SessionCtl) {
 		sc.sessionIDKeyLen = length
 	}
 }
 
-func WithSessionDuration(sessionDuration time.Duration) sessionCtlOption {
+func WithSessionDuration(sessionDuration time.Duration) SessionCtlOption {
 	return func(sc *SessionCtl) {
 		sc.sessionDuration = sessionDuration
 	}
@@ -56,7 +56,7 @@ type SessionCtl struct {
 // cookie and SessionStorer[AuthResult] for backing session data. Functional options can override
 // the cookie key, session ID length, and session duration.
 func NewSessionCtl(browserStore store.BrowserStorer, sessionStore store.SessionStorer[AuthResult],
-	options ...sessionCtlOption) *SessionCtl {
+	options ...SessionCtlOption) *SessionCtl {
 	sc := &SessionCtl{
 		sessionIDKey:    DefaultSessionIDKey,
 		sessionIDKeyLen: defaultSessionIDLength,
@@ -77,7 +77,7 @@ func (s *SessionCtl) Set(ctx context.Context, w http.ResponseWriter,
 	a AuthResult) (string, error) {
 	sid, err := RandomToken(s.sessionIDKeyLen)
 	if err != nil {
-		return "", errors.New("failed to generate session ID")
+		return "", fmt.Errorf("failed to generate session ID: %w", err)
 	}
 
 	if err = s.browserStore.Set(w, s.sessionIDKey, sid, s.sessionDuration); err != nil {
